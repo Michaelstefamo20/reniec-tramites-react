@@ -16,6 +16,7 @@ export async function register({ name, dni, email }) {
   const identityHash = dniDigest(dni);
   let accountId;
   try {
+    await assertDatabaseReady();
     const account = await authRepository.createPendingAccount({ nameCipher: seal(cleanName), dniCipher: seal(dni), dniHash: identityHash, email: cleanEmail });
     accountId = account.id;
     await sendActionEmail(account, "setup-password");
@@ -118,6 +119,16 @@ export async function getSessionUser(token) {
 
 export async function logout(token) {
   if (token) await authRepository.deleteSession(hashToken(token));
+}
+
+async function assertDatabaseReady() {
+  try {
+    if (!pool) throw new Error("DATABASE_URL missing");
+    await pool.query("SELECT 1");
+  } catch (error) {
+    console.error("Registration database check failed:", error.code || error.message);
+    throw new AuthError(503, "La base de datos no responde. Revisa DATABASE_URL y el estado del proveedor PostgreSQL en Vercel.");
+  }
 }
 
 function cryptoRandomToken() {

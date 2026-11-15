@@ -22,5 +22,12 @@ export async function sendActionEmail(account, purpose) {
     text: `${intro}\n\nAbre este enlace, válido por 30 minutos y de un solo uso:\n${url}\n\nSi no lo solicitaste, ignora este correo. No compartas este enlace.`,
     html: `<p>${intro}</p><p><a href="${url}">Continuar de forma segura</a></p><p>El enlace vence en 30 minutos y se usa una sola vez. No compartas este enlace.</p>`,
   };
-  await mailer.sendMail(message);
+  try {
+    await mailer.sendMail(message);
+  } catch (error) {
+    console.error("SMTP delivery failed:", error.code || "UNKNOWN", error.command || "no-command", error.responseCode || "no-response-code");
+    const failure = new Error("Gmail SMTP rechazó o no pudo entregar el mensaje. Revisa SMTP_PASS, MAIL_FROM y los permisos SMTP del remitente.");
+    failure.code = "SMTP_DELIVERY_FAILED";
+    throw failure;
+  }
 }

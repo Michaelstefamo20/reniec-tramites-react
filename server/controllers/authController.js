@@ -12,7 +12,10 @@ export const registerController = asyncHandler(async (req, res) => {
   try { res.status(202).json(await register(req.body || {})); }
   catch (error) {
     if (error instanceof AuthError) return res.status(error.status).json({ error: error.message });
-    console.error("Registration failure", error.message);
+    console.error("Registration failure", error.code || error.message);
+    if (error.code === "SMTP_DELIVERY_FAILED") {
+      return res.status(502).json({ error: error.message });
+    }
     return res.status(503).json({ error: emailConfigurationError() });
   }
 });
