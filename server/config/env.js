@@ -18,7 +18,11 @@ export const env = {
   anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
 };
 export const isProduction = env.nodeEnv === "production";
-export const emailProvider = env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom ? "smtp" : null;
+export const emailProvider = env.resendApiKey
+  ? "resend"
+  : env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom
+    ? "smtp"
+    : null;
 export const missingEmailVariables = () => [
   !env.appBaseUrl && "APP_BASE_URL",
   !env.smtpHost && "SMTP_HOST",

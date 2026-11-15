@@ -41,6 +41,7 @@ services:
       DATABASE_SSL: "false"
       DNI_ENCRYPTION_KEY: ${DNI_ENCRYPTION_KEY:?Set DNI_ENCRYPTION_KEY}
       DNI_HASH_KEY: ${DNI_HASH_KEY:?Set DNI_HASH_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}

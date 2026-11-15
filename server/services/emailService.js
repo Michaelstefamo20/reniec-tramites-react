@@ -5,6 +5,15 @@ import { authRepository } from "../repositories/authRepository.js";
 import { hashToken } from "../utils/crypto.js";
 import { appBaseUrl, requireValue } from "../utils/http.js";
 
+function normalizeResendSender(sender) {
+  const clean = sender.trim().replace(/^['"]|['"]$/g, "");
+  const addressOnly = clean.match(/<([^<>]+)>$/)?.[1] || clean;
+  if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(addressOnly)) {
+    throw new Error("MAIL_FROM debe ser una dirección válida, por ejemplo Reniec <avisos@dominio-verificado.com>.");
+  }
+  return clean.includes("<") ? clean : addressOnly;
+}
+
 export async function sendActionEmail(account, purpose) {
   if (!emailProvider) throw new Error("EMAIL_PROVIDER_NOT_CONFIGURED");
   const token = randomBytes(32).toString("base64url");
@@ -16,18 +25,37 @@ export async function sendActionEmail(account, purpose) {
   const subject = activation ? "Activa tu cuenta y crea tu contraseña" : purpose === "verify-email" ? "Confirma tu correo" : "Restablece tu contraseña";
   const intro = activation ? "Tu registro está casi listo. Abre el enlace para crear tu contraseña y activar la cuenta." : purpose === "verify-email" ? "Confirma que este correo te pertenece." : "Solicitaste cambiar la contraseña de tu cuenta.";
   const message = {
-    from: requireValue(env.mailFrom, "MAIL_FROM"),
+    from: emailProvider === "resend" ? normalizeResendSender(requireValue(env.mailFrom, "MAIL_FROM")) : requireValue(env.mailFrom, "MAIL_FROM"),
     to: account.email,
     subject,
     text: `${intro}\n\nAbre este enlace, válido por 30 minutos y de un solo uso:\n${url}\n\nSi no lo solicitaste, ignora este correo. No compartas este enlace.`,
     html: `<p>${intro}</p><p><a href="${url}">Continuar de forma segura</a></p><p>El enlace vence en 30 minutos y se usa una sola vez. No compartas este enlace.</p>`,
   };
+  if (emailProvider === "resend") {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(message),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      console.error("Resend delivery failed:", response.status, result.name || result.error || "unknown_error");
+      const failure = new Error(response.status === 403 || response.status === 422
+        ? "Resend rechazó el remitente. Verifica que MAIL_FROM use un dominio verificado en Resend."
+        : "Resend no pudo aceptar el correo. Revisa la API key y el estado del servicio.");
+      failure.code = "EMAIL_PROVIDER_DELIVERY_FAILED";
+      throw failure;
+    }
+    return;
+  }
+
   try {
     await mailer.sendMail(message);
   } catch (error) {
     console.error("SMTP delivery failed:", error.code || "UNKNOWN", error.command || "no-command", error.responseCode || "no-response-code");
-    const failure = new Error("Gmail SMTP rechazó o no pudo entregar el mensaje. Revisa SMTP_PASS, MAIL_FROM y los permisos SMTP del remitente.");
-    failure.code = "SMTP_DELIVERY_FAILED";
+    const failure = new Error("El servidor SMTP no pudo enviar el correo. Verifica SMTP_HOST, el remitente y las credenciales del servidor.");
+    failure.code = "EMAIL_PROVIDER_DELIVERY_FAILED";
     throw failure;
   }
 }
