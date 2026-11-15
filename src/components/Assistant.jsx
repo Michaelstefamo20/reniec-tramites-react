@@ -1,10 +1,12 @@
 import {useState,useRef,useEffect} from "react";
+import { askClaude } from "../services/assistantApi.js";
 
 export default function Assistant({hint,open,setOpen,load,region,language,onHelp}){
   const [msgs,setMsgs]=useState([{b:1,t:"Hola, soy tu asistente. Te ayudo con tus trámites por texto o voz."}]);
   const [listening,setListening]=useState(false);
   const [speaking,setSpeaking]=useState(false);
   const [voiceError,setVoiceError]=useState("");
+  const [thinking,setThinking]=useState(false);
   const recognition=useRef(null);
   const end=useRef();
   useEffect(()=>{end.current&&end.current.scrollIntoView({block:"nearest"})},[msgs]);
@@ -26,7 +28,19 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
     utterance.onerror=()=>setSpeaking(false);
     window.speechSynthesis.speak(utterance);
   };
-  const send=q=>{const answer=reply(q);setMsgs(m=>[...m,{t:q},{b:1,t:answer}]);speak(answer)};
+  const send=async q=>{
+    const question=q.trim();
+    if(!question||thinking)return;
+    const previous=msgs.slice(-8).map(item=>({role:item.b?"assistant":"user",content:item.t}));
+    setMsgs(items=>[...items,{t:question}]);
+    setThinking(true);setVoiceError("");
+    let answer;
+    try{answer=await askClaude(question,previous,region)}
+    catch(error){answer=`${reply(question)}${error.message?`\n\n(Respuesta local: Claude no está disponible.)`:""}`;setVoiceError(error.message)}
+    setMsgs(items=>[...items,{b:1,t:answer}]);
+    speak(answer);
+    setThinking(false);
+  };
   const startVoice=()=>{
     const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!Recognition){setVoiceError("El reconocimiento de voz no está disponible en este navegador. Puedes escribir tu consulta.");return;}
@@ -55,8 +69,8 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
     <button className="help-link" onClick={()=>{setOpen(false);onHelp?.()}}>Ver preguntas frecuentes y ayuda</button>
     <div className="chips">{["¿Cómo debe ser la foto?","¿Cómo pago?","Trámite familiar","Sin acceso digital"].map(c=><button key={c} onClick={()=>send(c)}>{c}</button>)}</div>
     <form onSubmit={e=>{e.preventDefault();if(v.trim()){send(v);setV("")}}} style={{display:"flex",gap:6,marginTop:10}}>
-      <input type="text" value={v} onChange={e=>setV(e.target.value)} placeholder="Escribe tu duda" aria-label="Tu duda"/>
-      <button className="btn" style={{padding:"10px 14px"}}>Enviar</button>
+      <input type="text" value={v} onChange={e=>setV(e.target.value)} placeholder="Escribe tu duda" aria-label="Tu duda" disabled={thinking} maxLength={1200}/>
+      <button className="btn" style={{padding:"10px 14px"}} disabled={thinking||!v.trim()}>{thinking?"Pensando…":"Enviar"}</button>
     </form>
   </aside>);
 }

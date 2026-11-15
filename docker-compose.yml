@@ -47,6 +47,7 @@ services:
       SMTP_USER: ${SMTP_USER:?Set SMTP_USER}
       SMTP_PASS: ${SMTP_PASS:?Set SMTP_PASS to a Google App Password}
       MAIL_FROM: ${MAIL_FROM:?Set MAIL_FROM to the sender Gmail}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "4173:4173"
     networks: [private]

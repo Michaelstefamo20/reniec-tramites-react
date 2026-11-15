@@ -3,6 +3,7 @@ import helmet from "helmet";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { authRoutes } from "./routes/authRoutes.js";
+import { assistantController, assistantRateLimit } from "./controllers/assistantController.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
 import { noStore, parseCookies, requireDatabase } from "./middleware/request.js";
 
@@ -15,6 +16,7 @@ app.use(express.json({ limit: "12kb", type: "application/json" }));
 app.use(parseCookies);
 app.use("/api", noStore);
 app.use("/api/health", healthRoutes);
+app.post("/api/assistant", assistantRateLimit, assistantController);
 app.use("/api/auth", requireDatabase(), authRoutes);
 app.use(express.static(path.join(root, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(root, "dist", "index.html")));

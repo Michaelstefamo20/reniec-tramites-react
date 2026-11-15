@@ -14,6 +14,8 @@ export const env = {
   smtpUser: process.env.SMTP_USER,
   smtpPass: process.env.SMTP_PASS,
   mailFrom: process.env.MAIL_FROM,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  anthropicModel: process.env.ANTHROPIC_MODEL || "claude-3-5-haiku-latest",
 };
 export const isProduction = env.nodeEnv === "production";
 export const emailProvider = env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom ? "smtp" : null;
