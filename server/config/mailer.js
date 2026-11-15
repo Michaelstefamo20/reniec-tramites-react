@@ -16,5 +16,5 @@ export function emailConfigurationError() {
     if (missing.length) return `Faltan ${missing.join(", ")} en .env. Para Gmail, SMTP_PASS debe ser una contraseña de aplicación.`;
     return "SMTP está configurado, pero no se pudo enviar. Verifica el acceso SMTP y el remitente.";
   }
-  return "Configura Gmail SMTP con SMTP_HOST, SMTP_USER, SMTP_PASS y MAIL_FROM en .env.";
+  return "El envío no está configurado en este despliegue. En Vercel > Project Settings > Environment Variables, completa SMTP_HOST, SMTP_USER, SMTP_PASS y MAIL_FROM para Production y haz un redeploy.";
 }
