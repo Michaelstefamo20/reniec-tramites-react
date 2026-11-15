@@ -7,6 +7,7 @@ import { healthRoutes } from "./routes/healthRoutes.js";
 import { noStore, parseCookies, requireDatabase } from "./middleware/request.js";
 
 const app = express();
+if (process.env.VERCEL) app.set("trust proxy", 1);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 app.disable("x-powered-by");
 app.use(helmet({ contentSecurityPolicy: false }));

@@ -1,12 +1,13 @@
 import { initializeDatabase, pool } from "./config/database.js";
 import { mailer } from "./config/mailer.js";
-import { emailProvider, env, isProduction } from "./config/env.js";
+import { emailProvider, env, isProduction, missingEmailVariables } from "./config/env.js";
 import app from "./app.js";
 
 const databaseReady = await initializeDatabase();
 app.locals.databaseReady = databaseReady;
 app.locals.databaseConfigured = Boolean(env.databaseUrl);
 app.locals.emailConfigured = Boolean(emailProvider);
+app.locals.emailMissingVariables = missingEmailVariables();
 if (isProduction && (!env.dniEncryptionKey || !env.dniHashKey)) {
   throw new Error("Set DNI_ENCRYPTION_KEY and DNI_HASH_KEY before production startup");
 }

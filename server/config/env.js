@@ -17,3 +17,9 @@ export const env = {
 };
 export const isProduction = env.nodeEnv === "production";
 export const emailProvider = env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom ? "smtp" : null;
+export const missingEmailVariables = () => [
+  !env.smtpHost && "SMTP_HOST",
+  !env.smtpUser && "SMTP_USER",
+  !env.smtpPass && "SMTP_PASS",
+  !env.mailFrom && "MAIL_FROM",
+].filter(Boolean);

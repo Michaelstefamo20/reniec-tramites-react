@@ -1,6 +1,6 @@
 import app from "../server/app.js";
 import { pool, initializeDatabase } from "../server/config/database.js";
-import { emailProvider, env, isProduction } from "../server/config/env.js";
+import { emailProvider, env, isProduction, missingEmailVariables } from "../server/config/env.js";
 
 let initialization;
 function missingConfiguration() {
@@ -23,6 +23,7 @@ async function ensureReady() {
       const databaseReady = await initializeDatabase();
       app.locals.databaseConfigured = Boolean(env.databaseUrl);
       app.locals.emailConfigured = Boolean(emailProvider);
+      app.locals.emailMissingVariables = missingEmailVariables();
       app.locals.databaseReady = databaseReady;
       if (!databaseReady) throw new Error("PostgreSQL no conecta. Comprueba DATABASE_URL, TLS y allowlist de red del proveedor PostgreSQL.");
     })();
