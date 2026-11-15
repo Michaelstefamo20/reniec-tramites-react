@@ -2,14 +2,16 @@ import {useState,useRef,useEffect} from "react";
 import {TRAMITES,STEPS,PAGOS,FER,NIV,AGS,HRS,NAV,ESTADOS,SEED,FAMILIA,HINT} from "../data.js";
 import {analyze,sharp,dias} from "../utils.js";
 import Demanda from "./Demanda.jsx";
+import { useLanguage } from "./LanguageProvider.jsx";
 
-export default function Inicio({go,tr,load}){
+export default function Inicio({go,tr,load,name=""}){
+  const { t } = useLanguage();
   const u=tr.find(x=>x.e<3)||tr[0];
   return(<>
-  <div className="hero"><h2>Hola, bienvenido</h2><p style={{margin:"4px 0 14px"}}>Realiza tus trámites de identidad sin colas ni errores.</p><button className="btn" style={{background:"#F1B022",color:"#2A1A10"}} onClick={()=>go("nuevo")}>Iniciar un trámite</button></div>
+  <div className="hero"><h2>{name?`Hola, ${name.split(" ")[0]}`:t("Hola, bienvenido")}</h2><p style={{margin:"4px 0 14px"}}>{t("Realiza tus trámites de identidad sin colas ni errores.")}</p><button className="btn" style={{background:"#F1B022",color:"#2A1A10"}} onClick={()=>go("nuevo")}>{t("Iniciar un trámite")}</button></div>
   <div className="card mem"><div><b>{load?"Alta demanda en este momento":"Plataforma operativa"}</b><div style={{color:"var(--mut)"}}>Tiempo estimado de un trámite: {load?"12":"5"} min</div></div><span className={"badge "+(load?"b-w":"b-ok")}>{load?"Demora posible":"Sin incidencias"}</span></div>
-  <section><h2 style={{fontSize:"1.1rem"}}>Accesos rápidos</h2><div className="grid g4">
-    {[["Renovar DNIe","renov","🪪",1],["Duplicado","dup","📋",1],["Copia de acta","acta","📜",1],["Trámite familiar","renov","👨‍👩‍👧",3]].map(q=><button key={q[0]} className="opt" onClick={()=>go("nuevo",{t:q[1],f:q[3]})}><span style={{fontSize:"1.6rem"}}>{q[2]}</span><b>{q[0]}</b></button>)}
+  <section><h2 style={{fontSize:"1.1rem"}}>{t("Accesos rápidos")}</h2><div className="grid g4">
+    {[["Renovar DNIe","renov","🪪",1],["Duplicado","dup","📋",1],["Copia de acta","acta","📜",1],["Trámite familiar","renov","👨‍👩‍👧",3]].map(q=><button key={q[0]} className="opt" onClick={()=>go("nuevo",{t:q[1],f:q[3]})}><span style={{fontSize:"1.6rem"}}>{q[2]}</span><b>{t(q[0])}</b></button>)}
   </div></section>
   <div className="grid g2">
     <Demanda/>

@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reniec_app
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d reniec_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    profiles: ["dev"]
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+    networks: [private]
+
+  app:
+    profiles: ["production"]
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4173
+      APP_BASE_URL: ${APP_BASE_URL:?Set APP_BASE_URL to the Vercel HTTPS URL}
+      DATABASE_URL: postgresql://appuser:${POSTGRES_PASSWORD}@db:5432/reniec_app
+      DATABASE_SSL: "false"
+      DNI_ENCRYPTION_KEY: ${DNI_ENCRYPTION_KEY:?Set DNI_ENCRYPTION_KEY}
+      DNI_HASH_KEY: ${DNI_HASH_KEY:?Set DNI_HASH_KEY}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:?Set SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS:?Set SMTP_PASS to a Google App Password}
+      MAIL_FROM: ${MAIL_FROM:?Set MAIL_FROM to the sender Gmail}
+    ports:
+      - "4173:4173"
+    networks: [private]
+
+networks:
+  private:
+    driver: bridge
+volumes:
+  postgres_data:

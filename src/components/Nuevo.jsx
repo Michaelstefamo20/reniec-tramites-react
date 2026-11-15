@@ -1,9 +1,11 @@
 import {useState,useRef,useEffect} from "react";
 import {TRAMITES,STEPS,PAGOS,FER,NIV,AGS,HRS,NAV,ESTADOS,SEED,FAMILIA,HINT} from "../data.js";
 import {analyze,sharp,dias} from "../utils.js";
+import { useLanguage } from "./LanguageProvider.jsx";
 
 
 export default function Nuevo({pre,famInit,onDone,go2}){
+  const { t: translate } = useLanguage();
   const [step,setStep]=useState(0);
   const [tr,setTr]=useState(pre||null);
   const [fam,setFam]=useState(famInit||1);
@@ -48,14 +50,14 @@ export default function Nuevo({pre,famInit,onDone,go2}){
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><button className="btn" onClick={()=>go2("mis")}>Ver seguimiento</button><button className="btn ghost" onClick={reset}>Iniciar otro trámite</button></div>
     </>:<>
     {step===0&&<>
-      <h2>¿Qué trámite necesitas?</h2><p className="sub">Un mismo flujo para ti o para toda tu familia.</p>
+      <h2>{translate("¿Qué trámite necesitas?")}</h2><p className="sub">Un mismo flujo para ti o para toda tu familia.</p>
       <div className="opts">{TRAMITES.map(x=><button key={x.id} className={"opt"+(tr===x.id?" sel":"")} onClick={()=>setTr(x.id)}><b>{x.n}</b><span>{x.d}</span></button>)}</div>
       {t&&<div className="card" style={{marginTop:12}}><b>Requisitos y costo</b><ul style={{margin:"8px 0",paddingLeft:20}}>{t.r.map(x=><li key={x}>{x}</li>)}</ul><b>Costo: S/ {t.p}.00 por persona</b> <span style={{color:"var(--mut)",fontSize:".85rem"}}>(monto de demostración; se paga al final, aquí mismo)</span></div>}
       <label htmlFor="fam">¿Para cuántas personas? (trámite familiar con un solo pago)</label>
       <select id="fam" value={fam} onChange={e=>setFam(+e.target.value)}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n===1?"Solo para mí":n+" personas"}</option>)}</select>
     </>}
     {step===1&&<>
-      <h2>Tus datos</h2><p className="sub">Validamos mientras escribes, así evitas rechazos al final.</p>
+      <h2>{translate("Tus datos")}</h2><p className="sub">Validamos mientras escribes, así evitas rechazos al final.</p>
       <label htmlFor="dni">N.º de DNI {fam>1&&"(titular)"}</label>
       <input id="dni" type="tel" inputMode="numeric" maxLength={8} value={dni} onChange={e=>setDni(e.target.value.replace(/\D/g,""))} placeholder="8 dígitos"/>
       {dni&&!dniOk&&<div className="err">Faltan {8-dni.length} dígitos</div>}
@@ -68,7 +70,7 @@ export default function Nuevo({pre,famInit,onDone,go2}){
       {doc&&<><label htmlFor="nd">Nombre que figura en el documento</label><input id="nd" type="text" value={nomDoc} onChange={e=>setNomDoc(e.target.value)}/>{nomDif&&<div className="err">No coincide con el titular ({nom}). Revísalo antes de continuar.</div>}</>}
     </>}
     {step===2&&<>
-      <h2>Foto con validación en tiempo real</h2><p className="sub">Sube una foto de frente, con fondo claro. La analizamos al instante en tu dispositivo.</p>
+      <h2>{translate("Foto con validación en tiempo real")}</h2><p className="sub">Sube una foto de frente, con fondo claro. La analizamos al instante en tu dispositivo.</p>
       <div className="photo">
         {foto?<img src={foto.url} alt="Vista previa de tu fotografía"/>:<div className="ph">Sin foto</div>}
         <div>
@@ -80,7 +82,7 @@ export default function Nuevo({pre,famInit,onDone,go2}){
       </div>
     </>}
     {step===3&&<>
-      <h2>Revisión previa</h2><p className="sub">Antes de enviar, comprobamos que todo esté en orden.</p>
+      <h2>{translate("Revisión previa")}</h2><p className="sub">Antes de enviar, comprobamos que todo esté en orden.</p>
       <table><tbody>
         <tr><td>Trámite</td><td>{t.n}</td></tr><tr><td>Personas</td><td>{fam}</td></tr>
         <tr><td>DNI</td><td>{dni}</td></tr><tr><td>Titular</td><td>{nom}</td></tr>
@@ -90,14 +92,14 @@ export default function Nuevo({pre,famInit,onDone,go2}){
       {issues.length?<ul className="chk">{issues.map(i=><li key={i}><b className="warn">!</b>{i}</li>)}</ul>:<p className="ok"><b>✓ Sin errores detectados. Listo para pagar.</b></p>}
     </>}
     {step===4&&<>
-      <h2>Pago integrado</h2><p className="sub">Sin salir de la plataforma. Monto referencial de demostración.</p>
+      <h2>{translate("Pago integrado")}</h2><p className="sub">Sin salir de la plataforma. Monto referencial de demostración.</p>
       <div className="opts c3">{PAGOS.map(p=><button key={p} className={"opt"+(pago===p?" sel":"")} onClick={()=>setPago(p)}><b>{p}</b></button>)}</div>
       <p className="sub" style={{borderLeft:"4px solid var(--gold)",paddingLeft:10}}>Paga solo aquí. No necesitas tramitadores ni intermediarios.</p>
       <p style={{fontSize:"1.3rem",fontWeight:700}}>Total: S/ {total.toFixed(2)} <span style={{fontSize:".85rem",fontWeight:400,color:"var(--mut)"}}>({fam} × S/ {t.p})</span></p>
     </>}
     <div className="nav">
-      <button className="btn ghost" onClick={()=>go(-1)} disabled={step===0}>Atrás</button>
-      {step<4?<button className="btn" disabled={!can} onClick={()=>go(1)}>Continuar</button>
+      <button className="btn ghost" onClick={()=>go(-1)} disabled={step===0}>{translate("Atrás")}</button>
+      {step<4?<button className="btn" disabled={!can} onClick={()=>go(1)}>{translate("Continuar")}</button>
              :<button className="btn" disabled={!can} onClick={()=>{setDone(true);onDone({id:"RN-"+(dni.slice(-4)||"0000")+"-"+String(total*7+1000),n:t.n,fam,pago,total,fecha:new Date().toLocaleDateString("es-PE")})}}>Pagar y enviar</button>}
     </div></>}
     </main>
