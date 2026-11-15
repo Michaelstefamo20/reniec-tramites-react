@@ -3,7 +3,7 @@ import "dotenv/config";
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.API_PORT || process.env.PORT || 4173),
-  appBaseUrl: process.env.APP_BASE_URL,
+  appBaseUrl: process.env.APP_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined),
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: process.env.DATABASE_SSL !== "false",
   dniEncryptionKey: process.env.DNI_ENCRYPTION_KEY,
@@ -20,6 +20,7 @@ export const env = {
 export const isProduction = env.nodeEnv === "production";
 export const emailProvider = env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom ? "smtp" : null;
 export const missingEmailVariables = () => [
+  !env.appBaseUrl && "APP_BASE_URL",
   !env.smtpHost && "SMTP_HOST",
   !env.smtpUser && "SMTP_USER",
   !env.smtpPass && "SMTP_PASS",
