@@ -12,6 +12,7 @@ export const mailer = emailProvider === "smtp"
 
 export function emailConfigurationError() {
   if (env.resendApiKey) return "Resend está configurado pero no puede enviar. Revisa API key, remitente verificado y Logs de Functions.";
+  if (process.env.NODE_ENV === "production") return "Falta RESEND_API_KEY en Vercel Production; este despliegue usa Resend para enviar correo.";
   if (env.smtpHost) {
     const missing = [!env.smtpUser && "SMTP_USER", !env.smtpPass && "SMTP_PASS", !env.mailFrom && "MAIL_FROM"].filter(Boolean);
     if (missing.length) return `Faltan ${missing.join(", ")} en .env. Para Gmail, SMTP_PASS debe ser una contraseña de aplicación.`;
