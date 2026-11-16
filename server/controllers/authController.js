@@ -13,7 +13,7 @@ export const registerController = asyncHandler(async (req, res) => {
   catch (error) {
     if (error instanceof AuthError) return res.status(error.status).json({ error: error.message });
     console.error("Registration failure", error.code || error.message);
-    if (error.code === "EMAIL_PROVIDER_DELIVERY_FAILED") {
+    if (["EMAIL_PROVIDER_DELIVERY_FAILED", "GMAIL_OAUTH_FAILED", "GMAIL_API_SEND_FAILED"].includes(error.code)) {
       return res.status(502).json({ error: error.message });
     }
     return res.status(503).json({ error: emailConfigurationError() });

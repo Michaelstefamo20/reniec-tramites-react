@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { emailProvider, env } from "./env.js";
+import { emailProvider, env, gmailOAuthConfigured } from "./env.js";
 
 export const mailer = emailProvider === "smtp"
   ? nodemailer.createTransport({
@@ -11,8 +11,9 @@ export const mailer = emailProvider === "smtp"
   : null;
 
 export function emailConfigurationError() {
+  if (gmailOAuthConfigured) return "Gmail API OAuth está configurado, pero no pudo enviar. Revisa el consentimiento OAuth, el remitente autorizado y el permiso gmail.send.";
   if (env.resendApiKey) return "Resend está configurado pero no puede enviar. Revisa API key, remitente verificado y Logs de Functions.";
-  if (process.env.NODE_ENV === "production") return "Falta RESEND_API_KEY en Vercel Production; este despliegue usa Resend para enviar correo.";
+  if (process.env.NODE_ENV === "production") return "En Vercel Production configura Gmail OAuth (GMAIL_OAUTH_CLIENT_ID, GMAIL_OAUTH_CLIENT_SECRET y GMAIL_OAUTH_REFRESH_TOKEN) o RESEND_API_KEY.";
   if (env.smtpHost) {
     const missing = [!env.smtpUser && "SMTP_USER", !env.smtpPass && "SMTP_PASS", !env.mailFrom && "MAIL_FROM"].filter(Boolean);
     if (missing.length) return `Faltan ${missing.join(", ")} en .env. Para Gmail, SMTP_PASS debe ser una contraseña de aplicación.`;
