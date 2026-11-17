@@ -2,11 +2,12 @@ import { Router } from "express";
 
 export const healthRoutes = Router();
 healthRoutes.get("/", (req, res) => {
-  const { databaseReady, emailConfigured, emailMissingVariables = [] } = req.app.locals;
+  const { databaseReady, emailConfigured, emailProvider = "none", emailMissingVariables = [] } = req.app.locals;
   res.status(databaseReady ? 200 : 503).json({
     api: "up",
     database: databaseReady ? "up" : "not-configured-or-unavailable",
     email: emailConfigured ? "configured" : "not-configured",
+    emailProvider,
     ...(emailConfigured ? {} : { emailMissingVariables }),
   });
 });

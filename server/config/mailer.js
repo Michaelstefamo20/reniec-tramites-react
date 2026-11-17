@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { emailProvider, env, gmailOAuthConfigured } from "./env.js";
+import { appsScriptMailConfigured, emailProvider, env, gmailOAuthConfigured } from "./env.js";
 
 export const mailer = emailProvider === "smtp"
   ? nodemailer.createTransport({
@@ -11,6 +11,7 @@ export const mailer = emailProvider === "smtp"
   : null;
 
 export function emailConfigurationError() {
+  if (appsScriptMailConfigured) return "Google Apps Script rechazó el envío. Revisa la URL publicada, el secreto compartido y la autorización de MailApp.";
   if (gmailOAuthConfigured) return "Gmail API OAuth está configurado, pero no pudo enviar. Revisa el consentimiento OAuth, el remitente autorizado y el permiso gmail.send.";
   if (env.resendApiKey) return "Resend está configurado pero no puede enviar. Revisa API key, remitente verificado y Logs de Functions.";
   if (process.env.NODE_ENV === "production") return "En Vercel Production configura Gmail OAuth (GMAIL_OAUTH_CLIENT_ID, GMAIL_OAUTH_CLIENT_SECRET y GMAIL_OAUTH_REFRESH_TOKEN) o RESEND_API_KEY.";

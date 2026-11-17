@@ -7,6 +7,7 @@ const databaseReady = await initializeDatabase();
 app.locals.databaseReady = databaseReady;
 app.locals.databaseConfigured = Boolean(env.databaseUrl);
 app.locals.emailConfigured = Boolean(emailProvider);
+app.locals.emailProvider = emailProvider || "none";
 app.locals.emailMissingVariables = missingEmailVariables();
 if (isProduction && (!env.dniEncryptionKey || !env.dniHashKey)) {
   throw new Error("Set DNI_ENCRYPTION_KEY and DNI_HASH_KEY before production startup");

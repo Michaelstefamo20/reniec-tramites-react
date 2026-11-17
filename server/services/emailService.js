@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mailer } from "../config/mailer.js";
 import { sendWithGmailApi } from "./gmailApiService.js";
+import { sendWithAppsScript } from "./appsScriptMailService.js";
 import { emailProvider, env } from "../config/env.js";
 import { authRepository } from "../repositories/authRepository.js";
 import { hashToken } from "../utils/crypto.js";
@@ -32,6 +33,10 @@ export async function sendActionEmail(account, purpose) {
     text: `${intro}\n\nAbre este enlace, válido por 30 minutos y de un solo uso:\n${url}\n\nSi no lo solicitaste, ignora este correo. No compartas este enlace.`,
     html: `<p>${intro}</p><p><a href="${url}">Continuar de forma segura</a></p><p>El enlace vence en 30 minutos y se usa una sola vez. No compartas este enlace.</p>`,
   };
+  if (emailProvider === "apps-script") {
+    await sendWithAppsScript(message);
+    return;
+  }
   if (emailProvider === "gmail-api") {
     await sendWithGmailApi(message);
     return;
