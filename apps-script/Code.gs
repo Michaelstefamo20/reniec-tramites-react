@@ -1,5 +1,13 @@
 const SECRET_PROPERTY = 'RENIEC_MAIL_SHARED_SECRET';
 
+/** Run once from the editor to trigger Google's send-mail authorization prompt. */
+function authorizeMailSending() {
+  const remaining = MailApp.getRemainingDailyQuota();
+  if (remaining < 1) throw new Error('No quedan destinatarios disponibles hoy en la cuota de Gmail.');
+  MailApp.sendEmail(Session.getActiveUser().getEmail(), 'Prueba de autorización de Trámites+', 'Autorización del remitente completada. Puedes ignorar este mensaje.');
+  Logger.log('Mail send authorization completed.');
+}
+
 /** Set once: replace the placeholder with the exact APPS_SCRIPT_MAIL_SECRET stored on Vercel. */
 function configureMailSecret() {
   const secret = 'REPLACE_WITH_THE_SAME_RANDOM_SECRET';
