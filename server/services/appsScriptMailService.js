@@ -26,7 +26,8 @@ export async function sendWithAppsScript({ to, subject, text, html }) {
   const result = await response.json().catch(() => ({}));
   if (!response.ok || result.ok !== true) {
     console.error("Apps Script mail gateway rejected request:", response.status, result.code || "unknown_error");
-    const error = new Error("Google Apps Script rechazó el envío. Revisa su URL, secreto compartido y autorización de MailApp.");
+    const details = typeof result.code === "string" ? result.code : "respuesta inválida";
+    const error = new Error(`Google Apps Script rechazó el envío (${details}). Verifica el secreto compartido, la implementación /exec y la cuota de MailApp.`);
     error.code = "APPS_SCRIPT_MAIL_FAILED";
     throw error;
   }

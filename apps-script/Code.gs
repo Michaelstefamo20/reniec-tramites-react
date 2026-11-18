@@ -21,8 +21,9 @@ function doPost(e) {
   try {
     const savedSecret = PropertiesService.getScriptProperties().getProperty(SECRET_PROPERTY);
     const data = JSON.parse(e && e.postData && e.postData.contents || '{}');
-    if (!savedSecret || !data.secret || !constantTimeEquals(String(data.secret), savedSecret)) {
-      return output({ ok: false, code: 'unauthorized' });
+    if (!savedSecret) return output({ ok: false, code: 'secret_not_configured' });
+    if (!data.secret || !constantTimeEquals(String(data.secret), savedSecret)) {
+      return output({ ok: false, code: 'secret_mismatch' });
     }
 
     const recipient = String(data.to || '').trim();
