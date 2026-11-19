@@ -10,6 +10,7 @@ import Ayuda from "./Ayuda.jsx";
 import Assistant from "./Assistant.jsx";
 import Soporte from "./Soporte.jsx";
 import PanelAdmin from "./PanelAdmin.jsx";
+import Agencias from "./Agencias.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
 import Onboarding from "./Onboarding.jsx";
 import { authApi, supportApi } from "../services/authApi.js";
@@ -23,17 +24,22 @@ export default function Shell(){
   const [supportNotifications,setSupportNotifications]=useState([]);
   const previousSupport=useRef(null);
   const [tr,setTr]=useState(SEED);
-  const [pre,setPre]=useState({t:null,f:1,k:0});
+  const [pre,setPre]=useState({t:null,f:1,k:0,familyMember:null});
   const [big,setBig]=useState(false);
   const [load,setLoad]=useState(false);
   const [open,setOpen]=useState(false);
   const [bell,setBell]=useState(false);
   const [citas,setCitas]=useState([]);
+  const [familyMembers,setFamilyMembers]=useState([]);
   useEffect(()=>{document.body.classList.toggle("big",big)},[big]);
   useEffect(()=>{
     if(!user?.email)return;
     const tourKey=`reniec-tour-complete:${encodeURIComponent(user.email)}`;
     if(localStorage.getItem(tourKey)!=="true")setShowTour(true);
+  },[user?.email]);
+  useEffect(()=>{
+    if(!user?.email)return;
+    authApi.familyMembers().then(data=>setFamilyMembers(data.members||[])).catch(()=>setFamilyMembers([]));
   },[user?.email]);
   useEffect(()=>{
     if(!user?.email)return;
@@ -69,7 +75,7 @@ export default function Shell(){
       .catch(()=>{})
       .finally(()=>setAuthChecking(false));
   },[]);
-  const go=(v,p)=>{if(v==="nuevo")setPre(x=>({t:p?p.t:null,f:p?p.f:1,k:x.k+1}));setView(v);setBell(false);window.scrollTo(0,0)};
+  const go=(v,p)=>{if(v==="nuevo")setPre(x=>({t:p?p.t:null,f:p?p.f:1,familyMember:p?.familyMember||null,k:x.k+1}));setView(v);setBell(false);window.scrollTo(0,0)};
   const adv=id=>setTr(l=>l.map(x=>x.id===id&&x.e<3?{...x,e:x.e+1}:x));
   const addCita=c=>setCitas(l=>[c,...l]);
   const closeTour=()=>{if(user?.email)localStorage.setItem(`reniec-tour-complete:${encodeURIComponent(user.email)}`,"true");setShowTour(false)};
@@ -81,7 +87,7 @@ export default function Shell(){
   if(!user)return <Registro onRegister={registerDemo}/>;
   return(<div className="app">
   <div className="main">
-    <header className="citizen-header"><button className="citizen-brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>Mi DNI en línea</b><small>Portal de orientación</small></span></button><nav className="citizen-top-nav" aria-label="Navegación principal">{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav><div className="citizen-profile"><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||"Mi cuenta"}</span></div>
+    <header className="citizen-header"><button className="citizen-brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>Mi DNI en línea</b><small>Portal de orientación</small></span></button><nav className="citizen-top-nav" aria-label="Navegación principal">{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["agencias","Oficinas"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav><div className="citizen-profile"><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||"Mi cuenta"}</span></div>
       <div className="header-actions"><label className="sr-only" htmlFor="language-select">Idioma</label><select id="language-select" value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Seleccionar idioma">{languages.map(l=><option key={l.code} value={l.code}>{l.name}{l.code===suggestedLanguage?" · sugerido":""}</option>)}</select>
       <button className="tog" onClick={()=>setBell(!bell)} aria-label={`Notificaciones del sitio, ${nots.length} nuevas`} aria-expanded={bell}>🔔 {nots.length>0&&<span className="notification-count">{nots.length}</span>}</button>
       <label className="sr-only" htmlFor="region-select">Región del Perú</label><select id="region-select" className="region-select" value={region} onChange={event=>chooseRegion(event.target.value)} aria-label="Elegir región del Perú">{regions.map(item=><option key={item} value={item}>{item}</option>)}</select>
@@ -91,15 +97,16 @@ export default function Shell(){
       {locationNotice&&<div className="location-toast" role="status"><b>{locationNotice.error?"Ubicación no disponible":`Región detectada: ${locationNotice.region}`}</b><span>{locationNotice.error||`Idioma ${locationNotice.suggestLanguage?"cambiado a ":"sugerido: "}${locationNotice.language==="ay"?"Aimara":locationNotice.language==="qu"?"Quechua":"Español"}. Puedes modificarlo en cualquier momento.`}</span>{locationNotice.error&&<button className="text-action" onClick={()=>go("ayuda")}>Ayuda con ubicación</button>}<button className="notice-close" onClick={()=>setLocationNotice(null)} aria-label="Cerrar aviso">×</button></div>}</header>
     <div className="content">
       {view==="inicio"&&<Inicio go={go} tr={tr} load={load} name={user?.name} userId={user?.email}/>}
-      {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
+      {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} familyMember={pre.familyMember} familyMembers={familyMembers} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
       {view==="mis"&&<Mis tr={tr} adv={adv}/>}
-      {view==="familia"&&<Familia go={go} citas={citas} addCita={addCita}/>}
+      {view==="familia"&&<Familia go={go} citas={citas} addCita={addCita} onMembersChange={setFamilyMembers}/>}
+      {view==="agencias"&&<Agencias region={region}/>}
       {view==="ayuda"&&<Ayuda big={big} setBig={setBig} load={load} setLoad={setLoad} setOpen={setOpen}/>}
       {view==="soporte"&&<Soporte/>}
       {view==="admin"&&<PanelAdmin user={user} onBack={()=>go("inicio")}/>}
     </div></div>
   {user?.isAdmin&&<button className="admin-shortcut" onClick={()=>go("admin")}>Panel de atención</button>}
-  <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
+  <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["agencias","⌖","Oficinas"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
   <div className="assist"><button className="fab" onClick={()=>setOpen(true)}><span className="av2">💬</span><span><b>Asistente virtual</b><br/><small>Ayuda por texto o voz</small></span></button></div>
   <Assistant hint={HINT[view]||"Puedo orientarte sobre navegación, idiomas y trámites incluidos en este prototipo."} open={open} setOpen={setOpen} load={load} region={region} language={language} onHelp={()=>go("ayuda")}/>
   {showTour&&<Onboarding onClose={closeTour}/>}

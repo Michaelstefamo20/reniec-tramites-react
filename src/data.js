@@ -11,5 +11,5 @@ export const HRS=["08:30","10:00","11:30","14:00","15:30"];
 export const NAV=[["inicio","🏠","Inicio"],["nuevo","➕","Nuevo trámite"],["mis","📄","Mis trámites"],["familia","👨‍👩‍👧","Mi familia"],["ayuda","❓","Ayuda"]];
 export const ESTADOS=["Registrado","Datos validados","En emisión","Listo para recojo"];
 export const SEED=[{id:"RN-4821-2310",n:"Renovación de DNIe",fam:1,pago:"Yape",total:41,fecha:"12/10/2026",e:2},{id:"RN-1177-1084",n:"Copia certificada de acta",fam:1,pago:"Plin",total:12,fecha:"02/10/2026",e:3}];
-export const FAMILIA=[{n:"Elena Cardoza",rel:"Titular",ok:true,txt:"DNI vigente hasta 2029"},{n:"Camila",rel:"Hija · 12 años",ok:false,txt:"Vence en 38 días"},{n:"Diego",rel:"Hijo · 8 años",ok:true,txt:"DNI vigente hasta 2028"}];
+export const FAMILIA=[];
 export const HINT={inicio:"Desde aquí inicias trámites, ves su estado y gestionas a tu familia.",nuevo:"Sigue los 5 pasos; te aviso al instante si algo falla.",mis:"Toca un trámite para ver su seguimiento. Te avisamos en cada cambio.",familia:"Aquí ves los DNI de tu hogar y puedes pagarlos en un solo abono.",ayuda:"Pregúntame lo que necesites o activa el modo asistido."};

@@ -61,6 +61,14 @@ export async function initializeDatabase() {
         shortcuts JSONB NOT NULL DEFAULT '["renew","duplicate","acts","family"]'::jsonb,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      CREATE TABLE IF NOT EXISTS family_members (
+        id BIGSERIAL PRIMARY KEY,
+        account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        relationship TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS family_members_account_idx ON family_members(account_id,created_at);
     `);
     console.log("PostgreSQL connection ready.");
     return true;

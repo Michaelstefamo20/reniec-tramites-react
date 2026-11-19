@@ -13,8 +13,9 @@ const SERVICES = [
   { id: "acts", title: "Copias de actas", description: "Nacimiento, matrimonio o defunción", icon: "▤", kind: "procedure", procedure: "acta" },
   { id: "family", title: "Mi familia", description: "Organiza accesos para tu hogar", icon: "♧", kind: "view", view: "familia" },
   { id: "support", title: "Contactar soporte", description: "Escribe al equipo de este sitio", icon: "✉", kind: "view", view: "soporte" },
+  { id: "offices", title: "Buscar oficinas", description: "Busca en el mapa por región o distrito", icon: "⌖", kind: "view", view: "agencias" },
 ];
-const DEFAULT_SERVICES = ["first", "renew", "duplicate", "address", "rectify", "appointment"];
+const DEFAULT_SERVICES = ["first", "renew", "duplicate", "address", "rectify", "appointment", "offices"];
 
 function loadFavorites(key) {
   try {

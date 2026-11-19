@@ -1,6 +1,6 @@
 import { preferencesRepository } from "../repositories/preferencesRepository.js";
 
-const ALLOWED = new Set(["renew", "duplicate", "acts", "family", "support", "appointments"]);
+const ALLOWED = new Set(["renew", "duplicate", "acts", "family", "support", "appointments", "first", "address", "rectify", "appointment", "offices"]);
 
 export async function getPreferencesController(req, res, next) {
   try {

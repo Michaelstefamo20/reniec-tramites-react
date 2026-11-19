@@ -47,4 +47,7 @@ export const authApi = {
   currentUser: () => request("/me", null, "GET"),
   getPreferences: () => request("/preferences", null, "GET"),
   setPreferences: shortcuts => request("/preferences", { shortcuts }, "PUT"),
+  familyMembers: () => request("/family", null, "GET"),
+  addFamilyMember: payload => request("/family", payload),
+  removeFamilyMember: id => request(`/family/${encodeURIComponent(id)}`, null, "DELETE"),
 };
