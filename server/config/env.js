@@ -3,7 +3,9 @@ import "dotenv/config";
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: Number(process.env.API_PORT || process.env.PORT || 4173),
-  appBaseUrl: process.env.APP_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined),
+  appBaseUrl: process.env.APP_BASE_URL || (process.env.NODE_ENV === "production"
+    ? "https://reniec-tramites-react.vercel.app"
+    : process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined),
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: process.env.DATABASE_SSL !== "false",
   dniEncryptionKey: process.env.DNI_ENCRYPTION_KEY,
