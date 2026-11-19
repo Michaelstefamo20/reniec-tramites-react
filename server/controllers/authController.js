@@ -1,6 +1,7 @@
 import { AuthError, getSessionUser, login, logout, register, requestPasswordReset, resetPassword, setupPassword, verifyEmail } from "../services/authService.js";
 import { emailConfigurationError } from "../config/mailer.js";
 import { cookieOptions } from "../utils/http.js";
+import { env } from "../config/env.js";
 
 const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 const emailDeliveryErrorCodes = new Set([
@@ -41,7 +42,8 @@ export const resetPasswordController = asyncHandler((req, res) => respond(res, (
 export const meController = asyncHandler(async (req, res) => {
   const user = await getSessionUser(req.cookies?.reniec_session);
   if (!user) { res.clearCookie("reniec_session", cookieOptions(0)); return res.status(401).json({ error: "La sesión venció. Inicia sesión otra vez." }); }
-  res.json({ user });
+  const adminEmails = String(env.supportAdminEmails || "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  res.json({ user: { ...user, isAdmin: adminEmails.includes(user.email.toLowerCase()) } });
 });
 export const logoutController = asyncHandler(async (req, res) => {
   await logout(req.cookies?.reniec_session);

@@ -2,7 +2,7 @@ import {useState,useRef,useEffect} from "react";
 import { askClaude } from "../services/assistantApi.js";
 
 export default function Assistant({hint,open,setOpen,load,region,language,onHelp}){
-  const [msgs,setMsgs]=useState([{b:1,t:"Hola, soy tu asistente. Te ayudo con tus trámites por texto o voz."}]);
+  const [msgs,setMsgs]=useState([{b:1,t:"Hola. Puedo orientarte sobre los servicios de este prototipo, ubicación, idiomas y cómo pedir ayuda."}]);
   const [listening,setListening]=useState(false);
   const [speaking,setSpeaking]=useState(false);
   const [voiceError,setVoiceError]=useState("");
@@ -10,14 +10,17 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
   const recognition=useRef(null);
   const end=useRef();
   useEffect(()=>{end.current&&end.current.scrollIntoView({block:"nearest"})},[msgs]);
-  const ayuda=["Debes elegir el trámite y cuántas personas incluye.","Ingresa tu DNI de 8 dígitos y tus nombres como figuran en el documento.","Usa foto de frente, con luz pareja y fondo claro. Te avisamos al instante si algo falla.","Revisa el resumen. Si hay observaciones, vuelve atrás y corrígelas.","Elige Yape, Plin o tarjeta. El pago se confirma aquí mismo."];
+  const ayuda=["Explora las opciones disponibles y personaliza los accesos de tu tablero.","Ingresa datos solo cuando sean necesarios para el prototipo.","Sigue las instrucciones de cada paso y revisa los archivos antes de continuar.","Lee el resumen. Esta demostración no envía trámites a RENIEC.","No realices pagos reales desde esta demostración."];
   const reply=q=>{q=q.toLowerCase();
-    if(/foto|luz|fondo/.test(q))return"La foto debe ser vertical, con fondo claro y uniforme, buena luz y sin lentes oscuros.";
-    if(/pago|yape|plin|costo|cuánto|cuanto/.test(q))return"Puedes pagar con Yape, Plin o tarjeta sin salir de la plataforma. En trámites familiares se paga todo en un solo abono.";
-    if(/famil|hijo|menor/.test(q))return"En el paso 1 elige cuántas personas incluir: un solo pago y un solo seguimiento.";
-    if(/cae|caída|error|demora|lento/.test(q))return load?"Hay alta demanda ahora. Tus datos se conservan mientras avanzas.":"El sistema está operativo. Si ves una demora, te avisamos arriba antes de que pierdas tiempo.";
-    if(/agencia|internet|sin acceso/.test(q))return"Si no tienes acceso digital, activa el Modo asistido: un familiar o agente completa el mismo flujo contigo.";
-    return"Puedo ayudarte con fotos, pagos, trámites familiares o el estado del sistema.";};
+    if(/foto|luz|fondo/.test(q))return"Puedo compartir recomendaciones generales para una foto, pero la aceptación oficial depende de los requisitos vigentes de RENIEC. Verifica las instrucciones del trámite en los canales oficiales.";
+    if(/pago|yape|plin|costo|cuánto|cuanto/.test(q))return"Este prototipo no procesa pagos reales. Para tasas y medios de pago vigentes, consulta el sitio oficial de RENIEC antes de pagar.";
+    if(/famil|hijo|menor/.test(q))return"Puedes usar la opción Mi familia como ayuda de organización en este prototipo. La representación legal y los trámites de menores requieren seguir los requisitos oficiales de RENIEC.";
+    if(/ubic|idioma|quechua|aimara|aymara/.test(q))return"Usa el selector de idioma del encabezado. El botón de ubicación solicita permiso del navegador y puede sugerir español, quechua o aimara según la región detectada.";
+    if(/estado|seguimiento|oficial/.test(q))return"No consulto sistemas oficiales de RENIEC. El estado mostrado aquí es una demostración; consulta el portal oficial para el seguimiento real.";
+    if(/correo|consulta|soporte|ayuda humana/.test(q))return"Abre Mis consultas para enviar un mensaje al equipo de este sitio y revisar su respuesta.";
+    if(/cae|caída|error|demora|lento/.test(q))return load?"El prototipo indica posible alta demanda. No puedo comprobar la disponibilidad de los sistemas oficiales.":"No puedo verificar servicios oficiales desde este chat. Si falla una función del sitio, abre Mis consultas.";
+    if(/agencia|internet|sin acceso/.test(q))return"Este sitio no está integrado con una red oficial de agencias. Para atención presencial y direcciones vigentes, revisa el directorio oficial de RENIEC.";
+    return"Puedo orientar sobre navegación, idiomas, consultas de soporte y el funcionamiento del prototipo. No represento oficialmente a RENIEC ni puedo comprobar pagos o trámites reales.";};
   const speak=text=>{
     if(!("speechSynthesis" in window))return;
     window.speechSynthesis.cancel();
@@ -60,7 +63,8 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
   const [v,setV]=useState("");
   return(<aside className={"card side"+(open?" open":"")} aria-label="Asistente virtual">
     <button className="close" onClick={()=>setOpen(false)} aria-label="Cerrar">✕</button>
-    <h2 style={{fontSize:"1.05rem"}}>Asistente virtual</h2>
+    <h2 style={{fontSize:"1.05rem"}}>Asistente virtual de orientación</h2>
+    <p className="voice-hint">No es un canal oficial de RENIEC. No escribas tu DNI, contraseña ni datos de pago.</p>
     <div className="msg bot">{hint}</div>
     <div className="voice-controls"><button className="btn voice-button" onClick={startVoice} disabled={listening} aria-pressed={listening}>{listening?"🎙 Escuchando…":"🎤 Hablar con el asistente"}</button><button className="btn ghost voice-button" onClick={()=>speaking?window.speechSynthesis.cancel():speak(msgs.filter(m=>m.b).at(-1)?.t||"Hola")} disabled={!window.speechSynthesis}>{speaking?"■ Detener audio":"🔊 Escuchar respuesta"}</button></div>
     {voiceError&&<p className="voice-error" role="status">{voiceError}</p>}

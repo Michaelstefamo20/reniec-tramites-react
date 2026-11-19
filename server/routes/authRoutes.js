@@ -2,6 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { forgotPasswordController, loginController, logoutController, meController, registerController, resetPasswordController, setupPasswordController, verifyEmailController } from "../controllers/authController.js";
 import { requireSession } from "../middleware/auth.js";
+import { getPreferencesController, setPreferencesController } from "../controllers/preferencesController.js";
 
 export const authRoutes = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Demasiados intentos. Espera unos minutos y vuelve a probar." } });
@@ -13,4 +14,6 @@ authRoutes.post("/login", loginController);
 authRoutes.post("/forgot-password", forgotPasswordController);
 authRoutes.post("/reset-password", resetPasswordController);
 authRoutes.get("/me", requireSession, meController);
+authRoutes.get("/preferences", requireSession, getPreferencesController);
+authRoutes.put("/preferences", requireSession, setPreferencesController);
 authRoutes.post("/logout", logoutController);

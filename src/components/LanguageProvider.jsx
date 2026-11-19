@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { LANGUAGE_OPTIONS, translate } from "../locales.js";
 
 const LanguageContext = createContext(null);
@@ -43,9 +43,12 @@ export function LanguageProvider({ children }) {
   const [language, setLanguage] = useState(() => localStorage.getItem(STORAGE_KEY) || "es");
   const [locationStatus, setLocationStatus] = useState("idle");
   const [locationNotice, setLocationNotice] = useState(null);
+  const watchId = useRef(null);
+  const lastLookup = useRef(0);
+  const languageRef = useRef(language);
   const t = useMemo(() => (text) => translate(text, language), [language]);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, language); document.documentElement.lang = language; }, [language]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY, language); document.documentElement.lang = language; languageRef.current = language; }, [language]);
   useEffect(() => { localStorage.setItem(REGION_KEY, region); }, [region]);
 
   const detectLocation = async () => {
@@ -53,22 +56,13 @@ export function LanguageProvider({ children }) {
     setLocationNotice(null);
     try {
       const position = await getCoordinates();
-      const params = new URLSearchParams({
-        latitude: String(position.coords.latitude),
-        longitude: String(position.coords.longitude),
-        localityLanguage: "es",
-      });
-      const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
-      if (!response.ok) throw new Error("No se pudo consultar la región de la ubicación.");
-      const result = await response.json();
-      const detectedRegion = findRegion(result.localityInfo?.administrative?.map(item => item.name).join(", ")
-        ? { state: result.principalSubdivision, region: result.localityInfo.administrative.map(item => item.name).join(", "), city: result.city }
-        : { state: result.principalSubdivision, region: result.locality, city: result.city });
-      if (!detectedRegion) throw new Error("No pudimos identificar una región del Perú. Elige una manualmente.");
-      const suggested = suggestion(detectedRegion);
-      setRegion(detectedRegion);
-      setLocationStatus("success");
-      setLocationNotice({ region: detectedRegion, language: suggested });
+      await updateDetectedPosition(position);
+      if (navigator.geolocation.watchPosition && watchId.current === null) {
+        watchId.current = navigator.geolocation.watchPosition(nextPosition => {
+          if (Date.now() - lastLookup.current >= 60000) updateDetectedPosition(nextPosition).catch(() => {});
+        }, () => {}, { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 });
+      }
+      setLocationStatus(watchId.current === null ? "success" : "tracking");
     } catch (error) {
       setLocationStatus("error");
       const message = error.code === 1
@@ -80,10 +74,42 @@ export function LanguageProvider({ children }) {
     }
   };
 
+  const updateDetectedPosition = async position => {
+      lastLookup.current = Date.now();
+      const params = new URLSearchParams({
+        latitude: String(position.coords.latitude),
+        longitude: String(position.coords.longitude),
+        localityLanguage: "es",
+      });
+      const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?${params}`);
+      if (!response.ok) throw new Error("No se pudo consultar la región de la ubicación.");
+      const result = await response.json();
+      if (result.countryCode && result.countryCode !== "PE") throw new Error("La ubicación detectada está fuera del Perú. Elige tu región manualmente.");
+      const detectedRegion = findRegion(result.localityInfo?.administrative?.map(item => item.name).join(", ")
+        ? { state: result.principalSubdivision, region: result.localityInfo.administrative.map(item => item.name).join(", "), city: result.city }
+        : { state: result.principalSubdivision, region: result.locality, city: result.city });
+      if (!detectedRegion) throw new Error("No pudimos identificar una región del Perú. Elige una manualmente.");
+      const suggested = suggestion(detectedRegion);
+      setRegion(detectedRegion);
+      setLocationStatus(watchId.current === null ? "success" : "tracking");
+      setLocationNotice({ region: detectedRegion, language: suggested, suggestLanguage: suggested !== languageRef.current });
+      if (suggested !== languageRef.current) setLanguage(suggested);
+  };
+
+  const stopLocationTracking = () => {
+    if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+    watchId.current = null;
+    setLocationStatus("idle");
+  };
+
+  useEffect(() => () => {
+    if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
+  }, []);
+
   const value = {
     language, setLanguage, region, setRegion,
     suggestedLanguage: suggestion(region), regions, languages: LANGUAGE_OPTIONS, t,
-    locationStatus, locationNotice, setLocationNotice, detectLocation,
+    locationStatus, locationNotice, setLocationNotice, detectLocation, stopLocationTracking,
   };
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

@@ -44,4 +44,7 @@ export const authApi = {
   me: () => request("/me", null, "GET"),
   logout: () => request("/logout"),
   supportCounts: () => supportRequest("/mine"),
+  currentUser: () => request("/me", null, "GET"),
+  getPreferences: () => request("/preferences", null, "GET"),
+  setPreferences: shortcuts => request("/preferences", { shortcuts }, "PUT"),
 };

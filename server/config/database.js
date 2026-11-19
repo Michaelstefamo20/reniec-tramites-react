@@ -56,6 +56,11 @@ export async function initializeDatabase() {
         resolved_at TIMESTAMPTZ
       );
       CREATE INDEX IF NOT EXISTS support_inquiries_account_updated_idx ON support_inquiries(account_id,updated_at DESC);
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        account_id BIGINT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+        shortcuts JSONB NOT NULL DEFAULT '["renew","duplicate","acts","family"]'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
     console.log("PostgreSQL connection ready.");
     return true;

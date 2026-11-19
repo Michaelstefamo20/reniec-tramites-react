@@ -46,7 +46,10 @@ export default function Registro({ onRegister }) {
         history.replaceState({}, "", location.pathname);
       } else if (mode === "forgot") setStatus(data.message || "Si existe una cuenta verificada para ese correo, enviaremos un enlace para restablecer la contraseña.");
       else if (mode === "reset") { setMode("login"); setPassword(""); setStatus("Contraseña actualizada. Inicia sesión con la nueva contraseña."); history.replaceState({}, "", location.pathname); }
-      else onRegister(data.user);
+      else {
+        const session = await authApi.currentUser().catch(() => null);
+        onRegister(session?.user || data.user);
+      }
     } catch (err) {
       setError(err.message || "No se pudo completar la solicitud.");
       if (err.message?.includes("Ya existe una cuenta")) setMode("login");
