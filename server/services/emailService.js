@@ -22,7 +22,7 @@ export async function sendActionEmail(account, purpose) {
   await authRepository.createToken({ accountId: account.id, tokenHash: hashToken(token), purpose, expiresAt: Date.now() + 30 * 60 * 1000 });
   const url = new URL("/", appBaseUrl());
   url.searchParams.set("token", token);
-  if (purpose === "setup-password") url.searchParams.set("setup", "1");
+  url.searchParams.set("action", purpose === "reset-password" ? "reset-password" : purpose === "setup-password" ? "setup-password" : "verify-email");
   const activation = purpose === "setup-password";
   const subject = activation ? "Activa tu cuenta y crea tu contraseña" : purpose === "verify-email" ? "Confirma tu correo" : "Restablece tu contraseña";
   const intro = activation ? "Tu registro está casi listo. Abre el enlace para crear tu contraseña y activar la cuenta." : purpose === "verify-email" ? "Confirma que este correo te pertenece." : "Solicitaste cambiar la contraseña de tu cuenta.";

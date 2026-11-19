@@ -22,15 +22,18 @@ export const env = {
   gmailOAuthClientId: process.env.GMAIL_OAUTH_CLIENT_ID,
   gmailOAuthClientSecret: process.env.GMAIL_OAUTH_CLIENT_SECRET,
   gmailOAuthRefreshToken: process.env.GMAIL_OAUTH_REFRESH_TOKEN,
+  supportAdminEmails: process.env.SUPPORT_ADMIN_EMAILS || "",
+  supportAdminEmails: process.env.SUPPORT_ADMIN_EMAILS || "",
+  supportAdminEmails: process.env.SUPPORT_ADMIN_EMAILS,
 };
 
 export const isProduction = env.nodeEnv === "production";
 export const gmailOAuthConfigured = Boolean(env.gmailOAuthClientId && env.gmailOAuthClientSecret && env.gmailOAuthRefreshToken && env.mailFrom);
 export const appsScriptMailConfigured = Boolean(env.appsScriptMailUrl && env.appsScriptMailSecret && env.mailFrom);
-export const emailProvider = appsScriptMailConfigured
-  ? "apps-script"
-  : gmailOAuthConfigured
-    ? "gmail-api"
+export const emailProvider = gmailOAuthConfigured
+  ? "gmail-api"
+  : appsScriptMailConfigured
+    ? "apps-script"
     : env.resendApiKey
       ? "resend"
       : !isProduction && env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom
@@ -38,6 +41,6 @@ export const emailProvider = appsScriptMailConfigured
         : null;
 export const missingEmailVariables = () => [
   !env.appBaseUrl && "APP_BASE_URL",
-  !emailProvider && "APPS_SCRIPT_MAIL_URL/APPS_SCRIPT_MAIL_SECRET o Gmail OAuth/Resend",
+  !emailProvider && "GMAIL_OAUTH_CLIENT_ID/GMAIL_OAUTH_CLIENT_SECRET/GMAIL_OAUTH_REFRESH_TOKEN o Apps Script/Resend",
   !env.mailFrom && "MAIL_FROM",
 ].filter(Boolean);

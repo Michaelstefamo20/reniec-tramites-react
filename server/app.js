@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { authRoutes } from "./routes/authRoutes.js";
 import { assistantController, assistantRateLimit } from "./controllers/assistantController.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
+import { supportRoutes } from "./routes/supportRoutes.js";
 import { noStore, parseCookies, requireDatabase } from "./middleware/request.js";
 
 const app = express();
@@ -18,6 +19,7 @@ app.use("/api", noStore);
 app.use("/api/health", healthRoutes);
 app.post("/api/assistant", assistantRateLimit, assistantController);
 app.use("/api/auth", requireDatabase(), authRoutes);
+app.use("/api/support", requireDatabase(), supportRoutes);
 app.use(express.static(path.join(root, "dist")));
 app.get("*", (_req, res) => res.sendFile(path.join(root, "dist", "index.html")));
 app.use((error, _req, res, _next) => {

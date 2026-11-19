@@ -1,4 +1,5 @@
 const BASE = "/api/auth";
+const SUPPORT = "/api/support";
 
 async function request(path, payload, method = "POST") {
   let response;
@@ -17,6 +18,23 @@ async function request(path, payload, method = "POST") {
   return data;
 }
 
+async function supportRequest(path, payload, method = "GET") {
+  let response;
+  try {
+    response = await fetch(`${SUPPORT}${path}`, { method, credentials:"same-origin", headers:payload?{"Content-Type":"application/json"}:undefined, body:payload?JSON.stringify(payload):undefined });
+  } catch { throw new Error("No se pudo conectar con el servicio de consultas."); }
+  const data = await response.json().catch(()=>({}));
+  if(!response.ok) throw new Error(data.error || `Solicitud falló (${response.status}).`);
+  return data;
+}
+
+export const supportApi = {
+  mine: () => supportRequest("/mine"),
+  create: payload => supportRequest("/",payload,"POST"),
+  adminList: () => supportRequest("/admin"),
+  update: (id,payload) => supportRequest(`/admin/${encodeURIComponent(id)}`,payload,"PATCH"),
+};
+
 export const authApi = {
   register: (payload) => request("/register", payload),
   setupPassword: (payload) => request("/setup-password", payload),
@@ -25,4 +43,5 @@ export const authApi = {
   resetPassword: (payload) => request("/reset-password", payload),
   me: () => request("/me", null, "GET"),
   logout: () => request("/logout"),
+  supportCounts: () => supportRequest("/mine"),
 };

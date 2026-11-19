@@ -42,6 +42,20 @@ export async function initializeDatabase() {
         expires_at BIGINT NOT NULL
       );
       ALTER TABLE accounts ALTER COLUMN password_hash DROP NOT NULL;
+      CREATE TABLE IF NOT EXISTS support_inquiries (
+        id BIGSERIAL PRIMARY KEY,
+        public_id UUID NOT NULL UNIQUE,
+        account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved')),
+        staff_reply TEXT,
+        staff_email TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_at TIMESTAMPTZ
+      );
+      CREATE INDEX IF NOT EXISTS support_inquiries_account_updated_idx ON support_inquiries(account_id,updated_at DESC);
     `);
     console.log("PostgreSQL connection ready.");
     return true;

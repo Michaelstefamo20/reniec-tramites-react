@@ -1,22 +1,14 @@
-import {useState,useRef,useEffect} from "react";
-import {TRAMITES,STEPS,PAGOS,FER,NIV,AGS,HRS,NAV,ESTADOS,SEED,FAMILIA,HINT} from "../data.js";
-import {analyze,sharp,dias} from "../utils.js";
-import Demanda from "./Demanda.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
+import Demanda from "./Demanda.jsx";
+import { ESTADOS } from "../data.js";
 
-export default function Inicio({go,tr,load,name=""}){
-  const { t } = useLanguage();
-  const u=tr.find(x=>x.e<3)||tr[0];
-  return(<>
-  <div className="hero"><h2>{name?`Hola, ${name.split(" ")[0]}`:t("Hola, bienvenido")}</h2><p style={{margin:"4px 0 14px"}}>{t("Realiza tus trámites de identidad sin colas ni errores.")}</p><button className="btn" style={{background:"#F1B022",color:"#2A1A10"}} onClick={()=>go("nuevo")}>{t("Iniciar un trámite")}</button></div>
-  <div className="card mem"><div><b>{load?"Alta demanda en este momento":"Plataforma operativa"}</b><div style={{color:"var(--mut)"}}>Tiempo estimado de un trámite: {load?"12":"5"} min</div></div><span className={"badge "+(load?"b-w":"b-ok")}>{load?"Demora posible":"Sin incidencias"}</span></div>
-  <section><h2 style={{fontSize:"1.1rem"}}>{t("Accesos rápidos")}</h2><div className="grid g4">
-    {[["Renovar DNIe","renov","🪪",1],["Duplicado","dup","📋",1],["Copia de acta","acta","📜",1],["Trámite familiar","renov","👨‍👩‍👧",3]].map(q=><button key={q[0]} className="opt" onClick={()=>go("nuevo",{t:q[1],f:q[3]})}><span style={{fontSize:"1.6rem"}}>{q[2]}</span><b>{t(q[0])}</b></button>)}
-  </div></section>
-  <div className="grid g2">
-    <Demanda/>
-    <div className="card" style={{borderLeft:"6px solid var(--gold)"}}><b>⚠️ Evita tramitadores</b><p style={{margin:"6px 0 0",color:"var(--mut)"}}>No necesitas intermediarios. Realiza y paga tu trámite solo aquí; desconfía de quien te ofrezca "agilizarlo" por un costo extra.</p></div>
-    {u&&<div className="card"><b>Último trámite</b><div style={{color:"var(--mut)"}}>{u.n} · {u.id}</div><div className="bar"><i style={{width:((u.e+1)/4*100)+"%"}}/></div><span className="badge b-i">{ESTADOS[u.e]}</span> <button className="btn ghost" style={{padding:"6px 12px",marginLeft:8}} onClick={()=>go("mis")}>Ver detalle</button></div>}
-    <div className="card"><b>⚠️ Aviso familiar</b><p style={{margin:"6px 0 10px",color:"var(--mut)"}}>El DNI de Camila vence en 38 días. Puedes renovarlo junto con el de tus otros hijos en un solo pago.</p><button className="btn ghost" style={{padding:"6px 12px"}} onClick={()=>go("familia")}>Ir a Mi familia</button></div>
-  </div></>);
+export default function Inicio({go,tr,load,name="",resolvedCount=0}){
+  const {t}=useLanguage();
+  const active=tr.find(x=>x.e<3)||tr[0];
+  return <div className="home-dashboard">
+    <section className="welcome-hero"><div className="welcome-copy"><span className="eyebrow">TRÁMITES DIGITALES · RENIEC</span><h2>{name?`Hola, ${name.split(" ")[0]}`:t("Hola, bienvenido")}</h2><p>Resuelve tus trámites de identidad con orientación clara y acompañamiento en cada paso.</p><button className="btn hero-action" onClick={()=>go("nuevo")}>Iniciar un trámite <span aria-hidden="true">→</span></button></div><div className="hero-illustration" aria-hidden="true"><div className="hero-orb">🪪</div><span className="hero-spark spark-one">✦</span><span className="hero-spark spark-two">✦</span></div></section>
+    <section className="status-strip"><span className={`status-dot ${load?"busy":""}`}/><div><b>{load?"Alta demanda en este momento":"Servicios disponibles"}</b><span>{load?"Algunos trámites podrían demorar un poco más.":"Puedes iniciar una solicitud o revisar una que ya enviaste."}</span></div><span className="status-tag">{load?"Demora":"Operativo"}</span></section>
+    <section className="home-section"><div className="section-heading"><div><span className="eyebrow">EMPIEZA POR AQUÍ</span><h3>¿Qué necesitas hacer?</h3></div><button className="text-action" onClick={()=>go("nuevo")}>Ver todos <span>→</span></button></div><div className="service-grid">{[["Renovar DNIe","Actualiza o renueva tu documento","🪪","renov",1], ["Duplicado de DNI","Solicita un reemplazo por pérdida","📄","dup",1], ["Copia de acta","Nacimiento, matrimonio o defunción","📜","acta",1], ["Trámite familiar","Gestiona varios trámites juntos","👨‍👩‍👧","renov",3]].map(card=><button key={card[0]} className="service-card" onClick={()=>go("nuevo",{t:card[3],f:card[4]})}><span className="service-icon">{card[2]}</span><b>{t(card[0])}</b><span>{card[1]}</span><i aria-hidden="true">↗</i></button>)}</div></section>
+    <section className="home-lower"><div className="home-main-column">{active&&<div className="card current-procedure"><div className="section-heading"><div><span className="eyebrow">SEGUIMIENTO</span><h3>Tu trámite reciente</h3></div><span className="badge b-i">{ESTADOS[active.e]}</span></div><b>{active.n}</b><p className="muted-line">Código {active.id} · {active.fecha}</p><div className="bar"><i style={{width:((active.e+1)/4*100)+"%"}}/></div><button className="btn ghost compact" onClick={()=>go("mis")}>Ver seguimiento</button></div>}<Demanda/></div><aside className="home-side-column"><div className="card help-card"><span className="help-icon">✦</span><span className="eyebrow">TE ACOMPAÑAMOS</span><h3>¿Tienes una consulta?</h3><p>Envía tu pregunta al equipo y revisa el estado desde tu cuenta.</p>{resolvedCount>0&&<div className="resolved-alert">✓ Tienes {resolvedCount} respuesta{resolvedCount===1?"":"s"} nueva{resolvedCount===1?"":"s"}</div>}<button className="btn ghost compact" onClick={()=>go("soporte")}>Ir a mis consultas</button></div><div className="card safety-card"><span className="safety-icon">🛡️</span><div><b>Cuida tu información</b><p>Realiza tus gestiones desde canales confiables. Nunca compartas contraseñas ni códigos.</p></div></div></aside></section>
+  </div>;
 }

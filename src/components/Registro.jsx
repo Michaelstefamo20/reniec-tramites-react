@@ -2,10 +2,12 @@ import { useState } from "react";
 import { authApi } from "../services/authApi.js";
 const query = new URLSearchParams(location.search);
 const activationToken = query.get("token");
-const activationMode = query.get("setup") === "1" && Boolean(activationToken);
+const activationAction = query.get("action") || (query.get("setup") === "1" ? "setup-password" : "");
+const activationMode = activationAction === "setup-password" && Boolean(activationToken);
+const resetMode = Boolean(activationToken) && !activationMode;
 
 export default function Registro({ onRegister }) {
-  const [mode, setMode] = useState(() => activationMode ? "setup" : "register");
+  const [mode, setMode] = useState(() => activationMode ? "setup" : resetMode ? "reset" : "register");
   const [name, setName] = useState("");
   const [dni, setDni] = useState("");
   const [email, setEmail] = useState("");
@@ -51,8 +53,8 @@ export default function Registro({ onRegister }) {
     } finally { setBusy(false); }
   };
 
-  const title = mode === "register" ? "Crea tu cuenta" : mode === "login" ? "Ingresa a tu cuenta" : mode === "forgot" ? "Recupera tu acceso" : mode === "setup" ? "Activa tu cuenta" : "Crea una nueva contraseña";
-  const lead = mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Elige una contraseña nueva para tu cuenta.";
+  const title = mode === "register" ? "Crea tu cuenta" : mode === "login" ? "Ingresa a tu cuenta" : mode === "forgot" ? "Recupera tu acceso" : mode === "setup" ? "Activa tu cuenta" : "Restablece tu contraseña";
+  const lead = mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Usa el enlace de recuperación para crear una contraseña nueva.";
 
   return <main className="auth-page">
     <section className="auth-card">
