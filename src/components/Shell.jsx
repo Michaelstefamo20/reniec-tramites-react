@@ -1,5 +1,5 @@
 import {useState,useEffect,useRef} from "react";
-import {NAV,ESTADOS,SEED,HINT} from "../data.js";
+import {ESTADOS,SEED,HINT} from "../data.js";
 import Registro from "./Registro.jsx";
 import LOGO from "../assets/logo.png";
 import Nuevo from "./Nuevo.jsx";
@@ -15,7 +15,7 @@ import Onboarding from "./Onboarding.jsx";
 import { authApi, supportApi } from "../services/authApi.js";
 
 export default function Shell(){
-  const { language, setLanguage, region, setRegion, regions, suggestedLanguage, languages, t, locationStatus, locationNotice, setLocationNotice, detectLocation, stopLocationTracking } = useLanguage();
+  const { language, setLanguage, region, setRegion, regions, suggestedLanguage, languages, locationStatus, locationNotice, setLocationNotice, detectLocation, stopLocationTracking } = useLanguage();
   const [view,setView]=useState("registro");
   const [user,setUser]=useState(null);
   const [authChecking,setAuthChecking]=useState(true);
@@ -80,15 +80,13 @@ export default function Shell(){
   if(authChecking)return <main className="auth-page"><div className="auth-card">Cargando tu cuenta…</div></main>;
   if(!user)return <Registro onRegister={registerDemo}/>;
   return(<div className="app">
-  <aside className="snav"><div style={{padding:"4px 8px 16px"}}><img className="logo" src={LOGO} alt="RENIEC, Registro Nacional de Identificación y Estado Civil" style={{height:56}}/><div style={{fontSize:".85rem",color:"var(--mut)",marginTop:6}}>Trámites+ · prototipo</div></div>
-    {NAV.filter(n=>n[0]!=="ayuda").map(n=><button key={n[0]} className={"nv"+(view===n[0]?" on":"")} onClick={()=>go(n[0])}><span>{n[1]}</span>{t(n[2])}</button>)}<button className={"nv"+(view==="ayuda"?" on":"")} onClick={()=>go("ayuda")}>❓ Ayuda</button><button className="nv" onClick={()=>setShowTour(true)}>ⓘ Tutorial</button></aside>
   <div className="main">
-    <header><img className="logo logo-m" src={LOGO} alt="RENIEC"/><h1>{t((NAV.find(n=>n[0]===view)||[])[2])}</h1>
+    <header className="citizen-header"><button className="citizen-brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>Mi DNI en línea</b><small>Portal de orientación</small></span></button><nav className="citizen-top-nav" aria-label="Navegación principal">{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav><div className="citizen-profile"><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||"Mi cuenta"}</span></div>
       <div className="header-actions"><label className="sr-only" htmlFor="language-select">Idioma</label><select id="language-select" value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Seleccionar idioma">{languages.map(l=><option key={l.code} value={l.code}>{l.name}{l.code===suggestedLanguage?" · sugerido":""}</option>)}</select>
       <button className="tog" onClick={()=>setBell(!bell)} aria-label={`Notificaciones del sitio, ${nots.length} nuevas`} aria-expanded={bell}>🔔 {nots.length>0&&<span className="notification-count">{nots.length}</span>}</button>
       <label className="sr-only" htmlFor="region-select">Región del Perú</label><select id="region-select" className="region-select" value={region} onChange={event=>chooseRegion(event.target.value)} aria-label="Elegir región del Perú">{regions.map(item=><option key={item} value={item}>{item}</option>)}</select>
       <button className="location-button" disabled={locationStatus==="loading"} onClick={async()=>{if(locationStatus==="tracking"){stopLocationTracking();return}setLocationNotice(null);await detectLocation()}} aria-label={locationStatus==="tracking"?"Detener seguimiento de ubicación":"Detectar ubicación y sugerir idioma"}>⌖ {locationStatus==="loading"?"Ubicando…":locationStatus==="tracking"?"Detener ubicación":"Usar ubicación"}</button>
-      <button className="tog" onClick={logout} aria-label="Cerrar sesión">Salir</button></div>
+      <button className="tog citizen-logout" onClick={logout} aria-label="Cerrar sesión">Cerrar sesión</button></div>
       {bell&&<div className="card notification-menu" role="status"><b>Notificaciones de soporte</b><p className="muted-line">Revisamos cambios de tus consultas cada 30 segundos. Los trámites oficiales requieren integración RENIEC.</p>{nots.map(item=><p key={item.id} style={{margin:"8px 0 0",fontSize:".9rem"}}>{item.text}</p>)}{!nots.length&&<p className="muted-line">No hay actualizaciones recientes de tus consultas.</p>}</div>}
       {locationNotice&&<div className="location-toast" role="status"><b>{locationNotice.error?"Ubicación no disponible":`Región detectada: ${locationNotice.region}`}</b><span>{locationNotice.error||`Idioma ${locationNotice.suggestLanguage?"cambiado a ":"sugerido: "}${locationNotice.language==="ay"?"Aimara":locationNotice.language==="qu"?"Quechua":"Español"}. Puedes modificarlo en cualquier momento.`}</span>{locationNotice.error&&<button className="text-action" onClick={()=>go("ayuda")}>Ayuda con ubicación</button>}<button className="notice-close" onClick={()=>setLocationNotice(null)} aria-label="Cerrar aviso">×</button></div>}</header>
     <div className="content">
@@ -101,7 +99,7 @@ export default function Shell(){
       {view==="admin"&&<PanelAdmin user={user} onBack={()=>go("inicio")}/>}
     </div></div>
   {user?.isAdmin&&<button className="admin-shortcut" onClick={()=>go("admin")}>Panel de atención</button>}
-  <nav className="tabs" aria-label="Menú principal">{NAV.filter(n=>n[0]!=="ayuda").map(n=><button key={n[0]} className={view===n[0]?"on":""} onClick={()=>go(n[0])}><span className="ico">{n[1]}</span>{n[0]==="nuevo"?"Nuevo trámite":n[0]==="mis"?"Mis trámites":t(n[2])}</button>)}<button className="tutorial-tab" onClick={()=>setShowTour(true)}><span className="ico">ⓘ</span>Tutorial</button></nav>
+  <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
   <div className="assist"><button className="fab" onClick={()=>setOpen(true)}><span className="av2">💬</span><span><b>Asistente virtual</b><br/><small>Ayuda por texto o voz</small></span></button></div>
   <Assistant hint={HINT[view]||"Puedo orientarte sobre navegación, idiomas y trámites incluidos en este prototipo."} open={open} setOpen={setOpen} load={load} region={region} language={language} onHelp={()=>go("ayuda")}/>
   {showTour&&<Onboarding onClose={closeTour}/>}
