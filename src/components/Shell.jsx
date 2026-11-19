@@ -29,6 +29,15 @@ export default function Shell(){
   const [vmsg,setVmsg]=useState("");
   useEffect(()=>{document.body.classList.toggle("big",big)},[big]);
   useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    const hasPasswordLink = Boolean(params.get("token")) && ["setup-password", "reset-password"].includes(action);
+    if (hasPasswordLink) {
+      setUser(null);
+      setView("registro");
+      setAuthChecking(false);
+      return;
+    }
     authApi.me()
       .then(data=>{setUser(data.user);setView("inicio")})
       .catch(()=>{})
