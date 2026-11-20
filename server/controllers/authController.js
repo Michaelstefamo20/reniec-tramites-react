@@ -1,7 +1,9 @@
 import { AuthError, getSessionUser, login, logout, register, requestPasswordReset, resetPassword, setupPassword, verifyEmail } from "../services/authService.js";
+import { authRepository } from "../repositories/authRepository.js";
 import { emailConfigurationError } from "../config/mailer.js";
 import { cookieOptions } from "../utils/http.js";
 import { env } from "../config/env.js";
+import { notifyAccount } from "../services/notificationService.js";
 
 const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 const emailDeliveryErrorCodes = new Set([
@@ -28,7 +30,9 @@ export const registerController = asyncHandler(async (req, res) => {
   }
 });
 
-export const setupPasswordController = asyncHandler((req, res) => respond(res, () => setupPassword(req.body || {})));
+export const setupPasswordController = asyncHandler(async(req,res)=>{
+  try{const result=await setupPassword(req.body||{});if(result.accountId)await notifyAccount(result.accountId,{kind:"account_activated",title:"Cuenta activada",message:"Tu cuenta quedó activada. Ya puedes explorar el portal de orientación.",destination:"inicio"});return res.json(result)}catch(error){if(error instanceof AuthError)return res.status(error.status).json({error:error.message});throw error}
+});
 export const verifyEmailController = asyncHandler((req, res) => respond(res, () => verifyEmail(req.body?.token)));
 export const loginController = asyncHandler((req, res) => respond(res, () => login(req.body || {}, res, cookieOptions)));
 export const forgotPasswordController = asyncHandler(async (req, res) => {
@@ -43,6 +47,10 @@ export const meController = asyncHandler(async (req, res) => {
   const user = await getSessionUser(req.cookies?.reniec_session);
   if (!user) { res.clearCookie("reniec_session", cookieOptions(0)); return res.status(401).json({ error: "La sesión venció. Inicia sesión otra vez." }); }
   const adminEmails = String(env.supportAdminEmails || "").split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  if(!adminEmails.includes(user.email.toLowerCase())){
+    const accountId=await authRepository.findAccountIdByEmail(user.email);
+    if(accountId)await notifyAccount(accountId,{kind:"welcome",title:"Bienvenido",message:"Tu bandeja está lista. Aquí aparecerán avisos de tu cuenta y de tus consultas de soporte.",destination:"inicio",entityKey:"welcome"});
+  }
   res.json({ user: { ...user, isAdmin: adminEmails.includes(user.email.toLowerCase()) } });
 });
 export const logoutController = asyncHandler(async (req, res) => {

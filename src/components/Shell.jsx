@@ -1,4 +1,4 @@
-import {useState,useEffect,useRef} from "react";
+import {useState,useEffect} from "react";
 import {ESTADOS,SEED,HINT} from "../data.js";
 import Registro from "./Registro.jsx";
 import LOGO from "../assets/logo.png";
@@ -13,7 +13,7 @@ import PanelAdmin from "./PanelAdmin.jsx";
 import Agencias from "./Agencias.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
 import Onboarding from "./Onboarding.jsx";
-import { authApi, supportApi } from "../services/authApi.js";
+import { authApi } from "../services/authApi.js";
 
 export default function Shell(){
   const { language, setLanguage, region, setRegion, regions, suggestedLanguage, languages, locationStatus, locationNotice, setLocationNotice, detectLocation, stopLocationTracking } = useLanguage();
@@ -21,8 +21,8 @@ export default function Shell(){
   const [user,setUser]=useState(null);
   const [authChecking,setAuthChecking]=useState(true);
   const [showTour,setShowTour]=useState(false);
-  const [supportNotifications,setSupportNotifications]=useState([]);
-  const previousSupport=useRef(null);
+  const [notifications,setNotifications]=useState([]);
+  const [notificationsLoading,setNotificationsLoading]=useState(false);
   const [tr,setTr]=useState(SEED);
   const [pre,setPre]=useState({t:null,f:1,k:0,familyMember:null});
   const [big,setBig]=useState(false);
@@ -45,21 +45,10 @@ export default function Shell(){
   useEffect(()=>{
     if(!user?.email)return;
     let alive=true;
-    const poll=async()=>{
-      try{
-        const result=await supportApi.mine();
-        if(!alive)return;
-        const current=Object.fromEntries((result.inquiries||[]).map(item=>[item.public_id,`${item.status}:${item.updated_at}`]));
-        if(previousSupport.current){
-          const changed=(result.inquiries||[]).filter(item=>previousSupport.current[item.public_id]&&previousSupport.current[item.public_id]!==current[item.public_id]);
-          if(changed.length)setSupportNotifications(items=>[...changed.map(item=>({id:item.public_id,text:`Tu consulta «${item.subject}» se actualizó: ${item.status_label||item.status}.`})),...items].slice(0,8));
-        }
-        previousSupport.current=current;
-      }catch{}
-    };
+    const poll=async()=>{try{const result=await authApi.notifications();if(alive)setNotifications(result.notifications||[])}catch{}};
     poll();
     const timer=setInterval(poll,30000);
-    return()=>{alive=false;clearInterval(timer);previousSupport.current=null;};
+    return()=>{alive=false;clearInterval(timer)};
   },[user?.email]);
   useEffect(()=>{
     const params = new URLSearchParams(window.location.search);
@@ -83,18 +72,21 @@ export default function Shell(){
   const registerDemo=profile=>{setUser(profile);setView("inicio")};
   const logout=async()=>{try{await authApi.logout()}finally{setUser(null);setView("registro")}};
   const chooseRegion=value=>{setRegion(value);const suggested=["Puno","Tacna","Moquegua"].includes(value)?"ay":["Apurímac","Ayacucho","Cusco","Huancavelica","Huánuco","Junín","Áncash","Arequipa","Lima","Pasco"].includes(value)?"qu":"es";setLanguage(suggested)};
-  const nots=supportNotifications;
+  const unreadCount=notifications.filter(item=>!item.read_at).length;
+  const refreshNotifications=async()=>{setNotificationsLoading(true);try{const result=await authApi.notifications();setNotifications(result.notifications||[])}catch{}finally{setNotificationsLoading(false)}};
+  const openNotification=async item=>{if(!item.read_at){await authApi.markNotificationRead(item.id).catch(()=>{});setNotifications(current=>current.map(notification=>notification.id===item.id?{...notification,read_at:new Date().toISOString()}:notification))}setBell(false);go(item.destination||"inicio")};
+  const markAllNotificationsRead=async()=>{await authApi.markAllNotificationsRead().catch(()=>{});setNotifications(current=>current.map(item=>item.read_at?item:{...item,read_at:new Date().toISOString()}))};
   if(authChecking)return <main className="auth-page"><div className="auth-card">Cargando tu cuenta…</div></main>;
   if(!user)return <Registro onRegister={registerDemo}/>;
   return(<div className="app">
   <div className="main">
     <header className="citizen-header"><button className="citizen-brand" data-tour="brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>Mi DNI en línea</b><small>Portal de orientación</small></span></button><nav className="citizen-top-nav" data-tour="navigation" aria-label="Navegación principal">{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["agencias","Oficinas"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{label}</button>)}</nav><div className="citizen-profile"><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||"Mi cuenta"}</span></div>
       <div className="header-actions" data-tour="preferences"><label className="sr-only" htmlFor="language-select">Idioma</label><select id="language-select" value={language} onChange={e=>setLanguage(e.target.value)} aria-label="Seleccionar idioma">{languages.map(l=><option key={l.code} value={l.code}>{l.name}{l.code===suggestedLanguage?" · sugerido":""}</option>)}</select>
-      <button className="tog" onClick={()=>setBell(!bell)} aria-label={`Notificaciones del sitio, ${nots.length} nuevas`} aria-expanded={bell}>🔔 {nots.length>0&&<span className="notification-count">{nots.length}</span>}</button>
+      <button className="tog notification-bell" onClick={()=>{const next=!bell;setBell(next);if(next)refreshNotifications()}} aria-label={`Notificaciones, ${unreadCount} sin leer`} aria-expanded={bell}>🔔 {unreadCount>0&&<span className="notification-count">{unreadCount>99?"99+":unreadCount}</span>}</button>
       <label className="sr-only" htmlFor="region-select">Región del Perú</label><select id="region-select" className="region-select" value={region} onChange={event=>chooseRegion(event.target.value)} aria-label="Elegir región del Perú">{regions.map(item=><option key={item} value={item}>{item}</option>)}</select>
       <button className="location-button" disabled={locationStatus==="loading"} onClick={async()=>{if(locationStatus==="tracking"){stopLocationTracking();return}setLocationNotice(null);await detectLocation()}} aria-label={locationStatus==="tracking"?"Detener seguimiento de ubicación":"Detectar ubicación y sugerir idioma"}>⌖ {locationStatus==="loading"?"Ubicando…":locationStatus==="tracking"?"Detener ubicación":"Usar ubicación"}</button>
       <button className="tog citizen-logout" onClick={logout} aria-label="Cerrar sesión">Cerrar sesión</button></div>
-      {bell&&<div className="card notification-menu" role="status"><b>Notificaciones de soporte</b><p className="muted-line">Revisamos cambios de tus consultas cada 30 segundos. Los trámites oficiales requieren integración RENIEC.</p>{nots.map(item=><p key={item.id} style={{margin:"8px 0 0",fontSize:".9rem"}}>{item.text}</p>)}{!nots.length&&<p className="muted-line">No hay actualizaciones recientes de tus consultas.</p>}</div>}
+      {bell&&<div className="card notification-menu" role="region" aria-label="Bandeja de notificaciones"><div className="notification-menu-head"><div><b>Notificaciones</b><span>{unreadCount?`${unreadCount} sin leer`:"Todo al día"}</span></div><div><button onClick={refreshNotifications} disabled={notificationsLoading} aria-label="Actualizar notificaciones">{notificationsLoading?"…":"↻"}</button>{unreadCount>0&&<button onClick={markAllNotificationsRead}>Marcar todas leídas</button>}</div></div>{notifications.length?notifications.map(item=><button key={item.id} className={`notification-item${item.read_at?"":" unread"}`} onClick={()=>openNotification(item)}><i aria-hidden="true"/><span><b>{item.title}</b><small>{item.message}</small><time>{new Date(item.created_at).toLocaleString("es-PE",{dateStyle:"short",timeStyle:"short"})}</time></span></button>):<div className="notification-empty"><span aria-hidden="true">♧</span><b>Tu bandeja está vacía</b><small>Aquí aparecerán avisos sobre tu cuenta, familiares y consultas de soporte.</small></div>}<p className="notification-disclaimer">Avisos de este sitio; no son notificaciones oficiales de RENIEC.</p></div>}
       {locationNotice&&<div className="location-toast" role="status"><b>{locationNotice.error?"Ubicación no disponible":`Región detectada: ${locationNotice.region}`}</b><span>{locationNotice.error||`Idioma ${locationNotice.suggestLanguage?"cambiado a ":"sugerido: "}${locationNotice.language==="ay"?"Aimara":locationNotice.language==="qu"?"Quechua":"Español"}. Puedes modificarlo en cualquier momento.`}</span>{locationNotice.error&&<button className="text-action" onClick={()=>go("ayuda")}>Ayuda con ubicación</button>}<button className="notice-close" onClick={()=>setLocationNotice(null)} aria-label="Cerrar aviso">×</button></div>}</header>
     <div className="content">
       {view==="inicio"&&<Inicio go={go} tr={tr} load={load} name={user?.name} userId={user?.email}/>}

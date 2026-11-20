@@ -5,6 +5,7 @@ import { requireSession } from "../middleware/auth.js";
 import { getPreferencesController, setPreferencesController } from "../controllers/preferencesController.js";
 import { addFamilyController, listFamilyController, removeFamilyController } from "../controllers/familyController.js";
 import { completeTutorialController, getTutorialController } from "../controllers/tutorialController.js";
+import { listNotificationsController, markAllNotificationsReadController, markNotificationReadController } from "../controllers/notificationController.js";
 
 export const authRoutes = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Demasiados intentos. Espera unos minutos y vuelve a probar." } });
@@ -23,4 +24,7 @@ authRoutes.post("/family", requireSession, addFamilyController);
 authRoutes.delete("/family/:id", requireSession, removeFamilyController);
 authRoutes.get("/tutorial", requireSession, getTutorialController);
 authRoutes.post("/tutorial", requireSession, completeTutorialController);
+authRoutes.get("/notifications", requireSession, listNotificationsController);
+authRoutes.post("/notifications/read-all", requireSession, markAllNotificationsReadController);
+authRoutes.post("/notifications/:id/read", requireSession, markNotificationReadController);
 authRoutes.post("/logout", logoutController);

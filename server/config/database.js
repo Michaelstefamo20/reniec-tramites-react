@@ -74,6 +74,19 @@ export async function initializeDatabase() {
         completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         outcome TEXT NOT NULL CHECK (outcome IN ('completed','skipped'))
       );
+      CREATE TABLE IF NOT EXISTS user_notifications (
+        id BIGSERIAL PRIMARY KEY,
+        account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        destination TEXT NOT NULL DEFAULT 'inicio',
+        entity_key TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        read_at TIMESTAMPTZ
+      );
+      CREATE INDEX IF NOT EXISTS user_notifications_account_created_idx ON user_notifications(account_id,created_at DESC);
+      CREATE UNIQUE INDEX IF NOT EXISTS user_notifications_entity_key_idx ON user_notifications(account_id,entity_key) WHERE entity_key IS NOT NULL;
     `);
     console.log("PostgreSQL connection ready.");
     return true;

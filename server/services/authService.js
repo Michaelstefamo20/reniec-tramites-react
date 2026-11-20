@@ -52,7 +52,7 @@ export async function setupPassword({ token, password }) {
     await authRepository.activateAccount(client, account.account_id, await passwordHash(password));
     await authRepository.consumeToken(client, hashToken(String(token)));
     await client.query("COMMIT");
-    return { message: "Cuenta activada.", email: account.email };
+    return { message: "Cuenta activada.", email: account.email, accountId: account.account_id };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;

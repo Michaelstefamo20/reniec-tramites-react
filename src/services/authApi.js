@@ -52,4 +52,7 @@ export const authApi = {
   removeFamilyMember: id => request(`/family/${encodeURIComponent(id)}`, null, "DELETE"),
   getTutorial: () => request("/tutorial", null, "GET"),
   completeTutorial: outcome => request("/tutorial", { outcome }),
+  notifications: () => request("/notifications", null, "GET"),
+  markNotificationRead: id => request(`/notifications/${encodeURIComponent(id)}/read`),
+  markAllNotificationsRead: () => request("/notifications/read-all"),
 };

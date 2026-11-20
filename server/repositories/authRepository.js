@@ -71,6 +71,10 @@ export const authRepository = {
     const { rows } = await pool.query("SELECT name_cipher,email FROM accounts WHERE id=$1", [accountId]);
     return rows[0];
   },
+  async findAccountIdByEmail(email) {
+    const { rows } = await pool.query("SELECT id FROM accounts WHERE email=$1", [email]);
+    return rows[0]?.id || null;
+  },
   async deleteSession(tokenHash) {
     await pool.query("DELETE FROM sessions WHERE token_hash=$1", [tokenHash]);
   },
