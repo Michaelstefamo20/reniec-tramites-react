@@ -69,6 +69,11 @@ export async function initializeDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS family_members_account_idx ON family_members(account_id,created_at);
+      CREATE TABLE IF NOT EXISTS user_tutorials (
+        account_id BIGINT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+        completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        outcome TEXT NOT NULL CHECK (outcome IN ('completed','skipped'))
+      );
     `);
     console.log("PostgreSQL connection ready.");
     return true;

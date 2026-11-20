@@ -4,6 +4,7 @@ import { forgotPasswordController, loginController, logoutController, meControll
 import { requireSession } from "../middleware/auth.js";
 import { getPreferencesController, setPreferencesController } from "../controllers/preferencesController.js";
 import { addFamilyController, listFamilyController, removeFamilyController } from "../controllers/familyController.js";
+import { completeTutorialController, getTutorialController } from "../controllers/tutorialController.js";
 
 export const authRoutes = Router();
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { error: "Demasiados intentos. Espera unos minutos y vuelve a probar." } });
@@ -20,4 +21,6 @@ authRoutes.put("/preferences", requireSession, setPreferencesController);
 authRoutes.get("/family", requireSession, listFamilyController);
 authRoutes.post("/family", requireSession, addFamilyController);
 authRoutes.delete("/family/:id", requireSession, removeFamilyController);
+authRoutes.get("/tutorial", requireSession, getTutorialController);
+authRoutes.post("/tutorial", requireSession, completeTutorialController);
 authRoutes.post("/logout", logoutController);

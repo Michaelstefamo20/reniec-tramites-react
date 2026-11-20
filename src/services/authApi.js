@@ -50,4 +50,6 @@ export const authApi = {
   familyMembers: () => request("/family", null, "GET"),
   addFamilyMember: payload => request("/family", payload),
   removeFamilyMember: id => request(`/family/${encodeURIComponent(id)}`, null, "DELETE"),
+  getTutorial: () => request("/tutorial", null, "GET"),
+  completeTutorial: outcome => request("/tutorial", { outcome }),
 };
