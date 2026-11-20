@@ -6,6 +6,7 @@ import { authRoutes } from "./routes/authRoutes.js";
 import { assistantController, assistantRateLimit } from "./controllers/assistantController.js";
 import { healthRoutes } from "./routes/healthRoutes.js";
 import { searchAgenciesController } from "./controllers/agencyController.js";
+import { mapTileController } from "./controllers/mapTileController.js";
 import { supportRoutes } from "./routes/supportRoutes.js";
 import { noStore, parseCookies, requireDatabase } from "./middleware/request.js";
 
@@ -19,6 +20,7 @@ app.use(parseCookies);
 app.use("/api", noStore);
 app.use("/api/health", healthRoutes);
 app.get("/api/agencies", searchAgenciesController);
+app.get("/api/map-tiles/:zoom/:x/:y.png", mapTileController);
 app.post("/api/assistant", assistantRateLimit, assistantController);
 app.use("/api/auth", requireDatabase(), authRoutes);
 app.use("/api/support", requireDatabase(), supportRoutes);
