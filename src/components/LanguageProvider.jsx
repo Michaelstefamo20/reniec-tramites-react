@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { LANGUAGE_OPTIONS, translate } from "../locales.js";
+import { LANGUAGE_OPTIONS, sourceText, translate } from "../locales.js";
 
 const LanguageContext = createContext(null);
 const STORAGE_KEY = "reniec-prototype-language";
@@ -7,6 +7,50 @@ const REGION_KEY = "reniec-prototype-region";
 const regions = ["Amazonas", "Áncash", "Apurímac", "Arequipa", "Ayacucho", "Cajamarca", "Callao", "Cusco", "Huancavelica", "Huánuco", "Ica", "Junín", "La Libertad", "Lambayeque", "Lima", "Loreto", "Madre de Dios", "Moquegua", "Pasco", "Piura", "Puno", "San Martín", "Tacna", "Tumbes", "Ucayali"];
 const quechuaRegions = ["Apurímac", "Ayacucho", "Cusco", "Huancavelica", "Huánuco", "Junín", "Áncash", "Arequipa", "Lima", "Pasco"];
 const aymaraRegions = ["Puno", "Tacna", "Moquegua"];
+const textRecords=new WeakMap();
+const attributeRecords=new WeakMap();
+const TRANSLATED_ATTRIBUTES=["placeholder","title","aria-label","aria-description"];
+
+function translateTextNode(node,language){
+  if(!node?.nodeValue||!node.nodeValue.trim())return;
+  const parent=node.parentElement;
+  if(parent?.closest("[data-no-translate],script,style,textarea,code,pre"))return;
+  let record=textRecords.get(node);
+  const current=node.nodeValue;
+  const original=sourceText(current);
+  if(!record){record={source:original,translated:null};textRecords.set(node,record)}
+  else if(current!==record.translated&&current!==record.source){record.source=original;record.translated=null}
+  const leading=record.source.match(/^\s*/)?.[0]||"";
+  const trailing=record.source.match(/\s*$/)?.[0]||"";
+  const core=record.source.slice(leading.length,record.source.length-trailing.length);
+  const translated=leading+translate(core,language)+trailing;
+  record.translated=translated;
+  if(node.nodeValue!==translated)node.nodeValue=translated;
+}
+
+function translateElementAttributes(element,language){
+  let records=attributeRecords.get(element);
+  if(!records){records=new Map();attributeRecords.set(element,records)}
+  if(element.closest("[data-no-translate],script,style,textarea,code,pre"))return;
+  for(const name of TRANSLATED_ATTRIBUTES){
+    if(!element.hasAttribute(name))continue;
+    const current=element.getAttribute(name);
+    let record=records.get(name);
+    const original=sourceText(current);
+    if(!record){record={source:original,translated:null};records.set(name,record)}
+    else if(current!==record.translated&&current!==record.source){record.source=original;record.translated=null}
+    const translated=translate(record.source,language);record.translated=translated;
+    if(current!==translated)element.setAttribute(name,translated);
+  }
+}
+
+function translateSubtree(root,language){
+  if(root.nodeType===Node.TEXT_NODE){translateTextNode(root,language);return}
+  if(root.nodeType!==Node.ELEMENT_NODE&&root.nodeType!==Node.DOCUMENT_FRAGMENT_NODE)return;
+  if(root.nodeType===Node.ELEMENT_NODE){translateElementAttributes(root,language);if(["SCRIPT","STYLE","TEXTAREA","CODE","PRE"].includes(root.tagName))return}
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  let node;while((node=walker.nextNode()))translateTextNode(node,language);
+}
 
 function normalize(value = "") {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -48,7 +92,23 @@ export function LanguageProvider({ children }) {
   const languageRef = useRef(language);
   const t = useMemo(() => (text) => translate(text, language), [language]);
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, language); document.documentElement.lang = language; languageRef.current = language; }, [language]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, language);
+    document.documentElement.lang = language;
+    languageRef.current = language;
+    const root=document.getElementById("root");
+    if(!root)return;
+    translateSubtree(root,language);
+    const observer=new MutationObserver(records=>{
+      for(const record of records){
+        if(record.type==="characterData")translateTextNode(record.target,language);
+        else if(record.type==="attributes")translateElementAttributes(record.target,language);
+        else for(const node of record.addedNodes)translateSubtree(node,language);
+      }
+    });
+    observer.observe(root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:TRANSLATED_ATTRIBUTES});
+    return()=>observer.disconnect();
+  }, [language]);
   useEffect(() => { localStorage.setItem(REGION_KEY, region); }, [region]);
 
   const detectLocation = async () => {
