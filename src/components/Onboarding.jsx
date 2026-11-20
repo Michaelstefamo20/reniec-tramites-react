@@ -15,6 +15,8 @@ const guide = [
 export default function Onboarding({ onClose, onNavigate }) {
   const [step, setStep] = useState(0);
   const [targetRect,setTargetRect]=useState(null);
+  const [bubble,setBubble]=useState(null);
+  const cardRef=useRef(null);
   const { t } = useLanguage();
   const current = guide[step];
   const navigateRef=useRef(onNavigate);
@@ -22,7 +24,7 @@ export default function Onboarding({ onClose, onNavigate }) {
 
   useEffect(() => {
     navigateRef.current?.(current.view);
-    setTargetRect(null);
+    setTargetRect(null);setBubble(null);
     let frame;
     let update;
     const timer=setTimeout(()=>{
@@ -36,12 +38,25 @@ export default function Onboarding({ onClose, onNavigate }) {
     return()=>{clearTimeout(timer);if(frame)cancelAnimationFrame(frame);if(update){window.removeEventListener("resize",update);window.removeEventListener("scroll",update,true)}};
   }, [current.target,current.view]);
 
+  useEffect(()=>{
+    if(!targetRect||!cardRef.current)return;
+    const card=cardRef.current.getBoundingClientRect();
+    const margin=14,gap=18;
+    const spaceBelow=window.innerHeight-(targetRect.top+targetRect.height);
+    const placeBelow=spaceBelow>=card.height+gap+margin||spaceBelow>=targetRect.top;
+    const top=placeBelow?Math.min(window.innerHeight-card.height-margin,targetRect.top+targetRect.height+gap):Math.max(margin,targetRect.top-card.height-gap);
+    const targetCenter=targetRect.left+targetRect.width/2;
+    const left=Math.max(margin,Math.min(window.innerWidth-card.width-margin,targetCenter-card.width/2));
+    const arrowLeft=Math.max(24,Math.min(card.width-40,targetCenter-left));
+    setBubble({top,left,arrow:placeBelow?"top":"bottom",arrowLeft});
+  },[targetRect,step]);
+
   const finish = outcome => onClose(outcome);
   const move = direction => setStep(value => Math.max(0, Math.min(guide.length - 1, value + direction)));
 
   return <div className="guided-tour" role="presentation">
     <div className="guided-tour-shade"/>
-    <section className="guided-tour-card card" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-description">
+    <section ref={cardRef} className={`guided-tour-card card${bubble?` arrow-${bubble.arrow}`:""}`} style={bubble?{top:bubble.top,left:bubble.left,"--tour-arrow-left":`${bubble.arrowLeft}px`}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)"}} role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-description">
       <div className="guided-tour-top"><span className="guided-tour-brand"><i>R</i> Mi DNI en línea</span><button className="guided-tour-skip" onClick={()=>finish("skipped")}>{t("Omitir tutorial")}</button></div>
       <div className="guided-tour-progress"><span style={{width:`${((step+1)/guide.length)*100}%`}}/></div>
       <div className="guided-tour-meta"><span>GUÍA INICIAL</span><b>{String(step+1).padStart(2,"0")} <i>/</i> {String(guide.length).padStart(2,"0")}</b></div>
