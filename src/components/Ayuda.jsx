@@ -1,10 +1,13 @@
+import { useLanguage } from "./LanguageProvider.jsx";
+
 export default function Ayuda({big,setBig,load,setLoad,setOpen}){
+  const {t}=useLanguage();
   const Q=[["¿Qué hago si mi foto necesita correcciones?","El prototipo ofrece indicaciones generales de iluminación y encuadre. Confirma siempre las especificaciones vigentes en los canales oficiales de RENIEC."],["¿Cómo pago un trámite?","Este sitio no procesa pagos reales. Consulta en RENIEC la tasa vigente y los medios oficiales antes de pagar."],["¿El seguimiento es oficial?","No. Los estados que aparecen aquí son ejemplos locales; el prototipo aún no está conectado a los sistemas de RENIEC."],["¿Necesito un tramitador?","No compartas tu contraseña ni códigos. Para realizar gestiones reales, usa los canales oficiales de RENIEC."],["¿Puedo pedir ayuda por voz?","Abre el asistente virtual. Si tu navegador admite reconocimiento de voz, permite el micrófono; también puedes escribir y escuchar respuestas."],["¿Puedo cambiar el idioma?","Usa el selector del encabezado. Si das permiso de ubicación, el prototipo puede sugerir español, quechua o aimara según la región."],["¿Cómo contacto al equipo de este sitio?","Abre Mis consultas para enviar una consulta al equipo que administra este prototipo."]];
   return(<>
-  <div><h2>Ayuda</h2><p className="sub">Preguntas frecuentes y herramientas de apoyo.</p></div>
-  <div className="card"><b>Asistente virtual 24/7</b><p style={{margin:"6px 0 10px",color:"var(--mut)"}}>Te guía paso a paso y responde dudas al instante.</p><button className="btn" onClick={()=>setOpen(true)}>Abrir asistente</button></div>
-  <div className="card"><b>Accesibilidad y demostración</b>
-    <label style={{display:"flex",gap:10,alignItems:"center",fontWeight:400}}><input type="checkbox" checked={big} onChange={()=>setBig(!big)}/> Modo asistido (texto grande)</label>
-    <label style={{display:"flex",gap:10,alignItems:"center",fontWeight:400}}><input type="checkbox" checked={load} onChange={()=>setLoad(!load)}/> Simular alta demanda del sistema</label></div>
-  <div className="card"><b>Preguntas frecuentes</b>{Q.map(q=><details key={q[0]}><summary>{q[0]}</summary><p style={{color:"var(--mut)"}}>{q[1]}</p></details>)}</div></>);
+  <div><h2>{t("Ayuda")}</h2><p className="sub">{t("Preguntas frecuentes y herramientas de apoyo.")}</p></div>
+  <div className="card"><b>{t("Asistente virtual 24/7")}</b><p style={{margin:"6px 0 10px",color:"var(--mut)"}}>{t("Te guía paso a paso y responde dudas al instante.")}</p><button className="btn" onClick={()=>setOpen(true)}>{t("Abrir asistente")}</button></div>
+  <div className="card"><b>{t("Accesibilidad y demostración")}</b>
+    <label style={{display:"flex",gap:10,alignItems:"center",fontWeight:400}}><input type="checkbox" checked={big} onChange={()=>setBig(!big)}/> {t("Modo asistido (texto grande)")}</label>
+    <label style={{display:"flex",gap:10,alignItems:"center",fontWeight:400}}><input type="checkbox" checked={load} onChange={()=>setLoad(!load)}/> {t("Simular alta demanda del sistema")}</label></div>
+  <div className="card"><b>{t("Preguntas frecuentes")}</b>{Q.map(q=><details key={q[0]}><summary>{t(q[0])}</summary><p style={{color:"var(--mut)"}}>{t(q[1])}</p></details>)}</div></>);
 }

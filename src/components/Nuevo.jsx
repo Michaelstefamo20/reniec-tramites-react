@@ -47,7 +47,7 @@ export default function Nuevo({pre,famInit,familyMembers=[],onDone,go2}){
   return(<>
   <div style={{display:"grid",gap:16}}>
     <nav className="card steps" aria-label="Pasos">
-      {STEPS.map((s,i)=><div key={s} className={"step"+(i===step&&!done?" on":"")+(i<step||done?" done":"")}><i>{i<step||done?"✓":i+1}</i>{s}</div>)}
+      {STEPS.map((s,i)=><div key={s} className={"step"+(i===step&&!done?" on":"")+(i<step||done?" done":"")}><i>{i<step||done?"✓":i+1}</i>{translate(s)}</div>)}
     </nav>
     <main className="card">
     {done?<>
@@ -59,8 +59,8 @@ export default function Nuevo({pre,famInit,familyMembers=[],onDone,go2}){
     </>:<>
     {step===0&&<>
       <h2>{translate("¿Qué trámite necesitas?")}</h2><p className="sub">Explora una guía de demostración para ti o para organizar información familiar.</p>
-      <div className="opts">{TRAMITES.map(x=><button key={x.id} className={"opt"+(tr===x.id?" sel":"")} onClick={()=>setTr(x.id)}><b>{x.n}</b><span>{x.d}</span></button>)}</div>
-      {t&&<div className="card" style={{marginTop:12}}><b>Orientación de ejemplo</b><ul style={{margin:"8px 0",paddingLeft:20}}>{t.r.map(x=><li key={x}>{x}</li>)}</ul><p className="muted-line">Confirma requisitos y tasas vigentes en los canales oficiales. Este prototipo no procesa pagos ni presenta solicitudes.</p></div>}
+      <div className="opts">{TRAMITES.map(x=><button key={x.id} className={"opt"+(tr===x.id?" sel":"")} onClick={()=>setTr(x.id)}><b>{translate(x.n)}</b><span>{translate(x.d)}</span></button>)}</div>
+      {t&&<div className="card" style={{marginTop:12}}><b>Orientación de ejemplo</b><ul style={{margin:"8px 0",paddingLeft:20}}>{t.r.map(x=><li key={x}>{translate(x)}</li>)}</ul><p className="muted-line">Confirma requisitos y tasas vigentes en los canales oficiales. Este prototipo no procesa pagos ni presenta solicitudes.</p></div>}
       {familyMembers.length>0&&<fieldset className="family-select"><legend>Familiares de tu cuenta (opcional)</legend><p className="muted-line">Solo selecciona personas para organizar el formulario. Esto no verifica identidad ni presenta un trámite.</p>{familyMembers.map(member=><label key={member.id} className="family-select-item"><input type="checkbox" checked={selectedFamily.includes(member.id)} onChange={event=>setSelectedFamily(current=>event.target.checked?[...current,member.id]:current.filter(id=>id!==member.id))}/>{member.name} · {member.relationship}</label>)}</fieldset>}
       <label htmlFor="fam">Personas en esta gestión de demostración</label>
       <select id="fam" value={fam} onChange={e=>setFam(+e.target.value)}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n===1?"Solo para mí":n+" personas"}</option>)}</select>
@@ -75,7 +75,7 @@ export default function Nuevo({pre,famInit,familyMembers=[],onDone,go2}){
       {nom&&!nomOk&&<div className="err">Escribe al menos un nombre y un apellido</div>}
       <label htmlFor="d">Documento de sustento (opcional: acta o constancia)</label>
       <input id="d" type="file" accept="image/*,application/pdf" onChange={upDoc}/>
-      {doc&&<ul className="chk" aria-live="polite">{doc.res.map(r=><li key={r.k}><b className={r.ok?"ok":"warn"}>{r.ok?"✓":"!"}</b><span><b>{r.k}:</b> {r.t}</span></li>)}</ul>}
+      {doc&&<ul className="chk" aria-live="polite">{doc.res.map(r=><li key={r.k}><b className={r.ok?"ok":"warn"}>{r.ok?"✓":"!"}</b><span><b>{translate(r.k)}:</b> {translate(r.t)}</span></li>)}</ul>}
       {doc&&<><label htmlFor="nd">Nombre que figura en el documento</label><input id="nd" type="text" value={nomDoc} onChange={e=>setNomDoc(e.target.value)}/>{nomDif&&<div className="err">No coincide con el titular ({nom}). Revísalo antes de continuar.</div>}</>}
     </>}
     {step===2&&<>

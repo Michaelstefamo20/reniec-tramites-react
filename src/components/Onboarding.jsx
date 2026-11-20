@@ -59,11 +59,11 @@ export default function Onboarding({ onClose, onNavigate }) {
     <section ref={cardRef} className={`guided-tour-card card${bubble?` arrow-${bubble.arrow}`:""}`} style={bubble?{top:bubble.top,left:bubble.left,"--tour-arrow-left":`${bubble.arrowLeft}px`}:{top:"50%",left:"50%",transform:"translate(-50%,-50%)"}} role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-description">
       <div className="guided-tour-top"><span className="guided-tour-brand"><i>R</i> Mi DNI en línea</span><button className="guided-tour-skip" onClick={()=>finish("skipped")}>{t("Omitir tutorial")}</button></div>
       <div className="guided-tour-progress"><span style={{width:`${((step+1)/guide.length)*100}%`}}/></div>
-      <div className="guided-tour-meta"><span>GUÍA INICIAL</span><b>{String(step+1).padStart(2,"0")} <i>/</i> {String(guide.length).padStart(2,"0")}</b></div>
+      <div className="guided-tour-meta"><span>{t("GUÍA INICIAL")}</span><b>{String(step+1).padStart(2,"0")} <i>/</i> {String(guide.length).padStart(2,"0")}</b></div>
       <div className="guided-tour-mark" aria-hidden="true">{["✦","☷","▦","◷","♧","⌖","文","✧"][step]}</div>
-      <h2 id="tour-title">{guide[step].title}</h2>
-      <p id="tour-description">{guide[step].text}</p>
-      <div className="guided-tour-controls"><button className="btn ghost" onClick={()=>move(-1)} disabled={step===0}>Anterior</button><div className="guided-tour-dots" aria-label={`Paso ${step+1} de ${guide.length}`}>{guide.map((item,index)=><span key={item.target} className={index===step?"active":""}/>)}</div><button className="btn" onClick={()=>step===guide.length-1?finish("completed"):move(1)}>{step===guide.length-1?"Finalizar":"Siguiente"}</button></div>
+      <h2 id="tour-title">{t(guide[step].title)}</h2>
+      <p id="tour-description">{t(guide[step].text)}</p>
+      <div className="guided-tour-controls"><button className="btn ghost" onClick={()=>move(-1)} disabled={step===0}>Anterior</button><div className="guided-tour-dots" aria-label={`Paso ${step+1} de ${guide.length}`}>{guide.map((item,index)=><span key={item.target} className={index===step?"active":""}/>)}</div><button className="btn" onClick={()=>step===guide.length-1?finish("completed"):move(1)}>{t(step===guide.length-1?"Finalizar":"Siguiente")}</button></div>
     </section>
     {targetRect&&<div className="guided-tour-focus" aria-hidden="true" style={{top:targetRect.top-6,left:targetRect.left-6,width:targetRect.width+12,height:targetRect.height+12}}/>}
   </div>;

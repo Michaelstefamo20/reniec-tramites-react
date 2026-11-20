@@ -1,7 +1,9 @@
 import {useState,useRef,useEffect} from "react";
 import { askClaude } from "../services/assistantApi.js";
+import { useLanguage } from "./LanguageProvider.jsx";
 
 export default function Assistant({hint,open,setOpen,load,region,language,onHelp}){
+  const {t}=useLanguage();
   const [msgs,setMsgs]=useState([{b:1,t:"Hola. Puedo orientarte sobre los servicios de este prototipo, ubicación, idiomas y cómo pedir ayuda."}]);
   const [listening,setListening]=useState(false);
   const [speaking,setSpeaking]=useState(false);
@@ -62,19 +64,19 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
   useEffect(()=>()=>{recognition.current?.stop();window.speechSynthesis?.cancel()},[]);
   const [v,setV]=useState("");
   return(<aside className={"card side"+(open?" open":"")} aria-label="Asistente virtual">
-    <button className="close" onClick={()=>setOpen(false)} aria-label="Cerrar">✕</button>
-    <h2 style={{fontSize:"1.05rem"}}>Asistente virtual de orientación</h2>
-    <p className="voice-hint">No es un canal oficial de RENIEC. No escribas tu DNI, contraseña ni datos de pago.</p>
-    <div className="msg bot">{hint}</div>
-    <div className="voice-controls"><button className="btn voice-button" onClick={startVoice} disabled={listening} aria-pressed={listening}>{listening?"🎙 Escuchando…":"🎤 Hablar con el asistente"}</button><button className="btn ghost voice-button" onClick={()=>speaking?window.speechSynthesis.cancel():speak(msgs.filter(m=>m.b).at(-1)?.t||"Hola")} disabled={!window.speechSynthesis}>{speaking?"■ Detener audio":"🔊 Escuchar respuesta"}</button></div>
-    {voiceError&&<p className="voice-error" role="status">{voiceError}</p>}
-    {region&&<p className="voice-hint">Región seleccionada: {region}. El audio usa una voz disponible en tu navegador.</p>}
+    <button className="close" onClick={()=>setOpen(false)} aria-label={t("Cerrar")}>✕</button>
+    <h2 style={{fontSize:"1.05rem"}}>{t("Asistente virtual de orientación")}</h2>
+    <p className="voice-hint">{t("No es un canal oficial de RENIEC. No escribas tu DNI, contraseña ni datos de pago.")}</p>
+    <div className="msg bot">{t(hint)}</div>
+    <div className="voice-controls"><button className="btn voice-button" onClick={startVoice} disabled={listening} aria-pressed={listening}>{listening?`🎙 ${t("Escuchando…")}`:`🎤 ${t("Hablar con el asistente")}`}</button><button className="btn ghost voice-button" onClick={()=>speaking?window.speechSynthesis.cancel():speak(msgs.filter(m=>m.b).at(-1)?.t||"Hola")} disabled={!window.speechSynthesis}>{speaking?`■ ${t("Detener audio")}`:`🔊 ${t("Escuchar respuesta")}`}</button></div>
+    {voiceError&&<p className="voice-error" role="status">{t(voiceError)}</p>}
+    {region&&<p className="voice-hint">{t("Región seleccionada")}: {t(region)}. {t("El audio usa una voz disponible en tu navegador.")}</p>}
     <div className="chat">{msgs.map((m,i)=><div key={i} className={"msg "+(m.b?"bot":"me")}>{m.t}</div>)}<div ref={end}/></div>
-    <button className="help-link" onClick={()=>{setOpen(false);onHelp?.()}}>Ver preguntas frecuentes y ayuda</button>
-    <div className="chips">{["¿Cómo debe ser la foto?","¿Cómo pago?","Trámite familiar","Sin acceso digital"].map(c=><button key={c} onClick={()=>send(c)}>{c}</button>)}</div>
+    <button className="help-link" onClick={()=>{setOpen(false);onHelp?.()}}>{t("Ver preguntas frecuentes y ayuda")}</button>
+    <div className="chips">{["¿Cómo debe ser la foto?","¿Cómo pago?","Trámite familiar","Sin acceso digital"].map(c=><button key={c} onClick={()=>send(c)}>{t(c)}</button>)}</div>
     <form onSubmit={e=>{e.preventDefault();if(v.trim()){send(v);setV("")}}} style={{display:"flex",gap:6,marginTop:10}}>
-      <input type="text" value={v} onChange={e=>setV(e.target.value)} placeholder="Escribe tu duda" aria-label="Tu duda" disabled={thinking} maxLength={1200}/>
-      <button className="btn" style={{padding:"10px 14px"}} disabled={thinking||!v.trim()}>{thinking?"Pensando…":"Enviar"}</button>
+      <input type="text" value={v} onChange={e=>setV(e.target.value)} placeholder={t("Escribe tu duda")} aria-label={t("Tu duda")} disabled={thinking} maxLength={1200}/>
+      <button className="btn" style={{padding:"10px 14px"}} disabled={thinking||!v.trim()}>{thinking?t("Pensando…"):t("Enviar")}</button>
     </form>
   </aside>);
 }

@@ -14,7 +14,9 @@ const TRANSLATED_ATTRIBUTES=["placeholder","title","aria-label","aria-descriptio
 function translateTextNode(node,language){
   if(!node?.nodeValue||!node.nodeValue.trim())return;
   const parent=node.parentElement;
-  if(parent?.closest("[data-no-translate],script,style,textarea,code,pre"))return;
+  if(parent?.closest("[data-no-translate],script,style,textarea,code,pre,[contenteditable='true'],.support-body,.support-reply,.support-owner,.notification-item,.agency-result,[data-user-content]"))return;
+  const source=sourceText(node.nodeValue.trim());
+  if(translate(source,language)===source)return;
   let record=textRecords.get(node);
   const current=node.nodeValue;
   const original=sourceText(current);
@@ -31,7 +33,7 @@ function translateTextNode(node,language){
 function translateElementAttributes(element,language){
   let records=attributeRecords.get(element);
   if(!records){records=new Map();attributeRecords.set(element,records)}
-  if(element.closest("[data-no-translate],script,style,textarea,code,pre"))return;
+  if(element.closest("[data-no-translate],script,style,textarea,code,pre,[contenteditable='true']"))return;
   for(const name of TRANSLATED_ATTRIBUTES){
     if(!element.hasAttribute(name))continue;
     const current=element.getAttribute(name);
@@ -93,6 +95,8 @@ export function LanguageProvider({ children }) {
   const t = useMemo(() => (text) => translate(text, language), [language]);
 
   useEffect(() => {
+    const validLanguage=LANGUAGE_OPTIONS.some(option=>option.code===language)?language:"es";
+    if(validLanguage!==language){setLanguage(validLanguage);return}
     localStorage.setItem(STORAGE_KEY, language);
     document.documentElement.lang = language;
     languageRef.current = language;
