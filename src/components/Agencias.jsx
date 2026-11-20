@@ -16,16 +16,16 @@ export default function Agencias({region="Lima"}){
   const find=async(lat,lon)=>{
     setBusy(true);setError("");setItems([]);
     try{
-      const query=["RENIEC",district.trim(),selectedRegion,"Perú"].filter(Boolean).join(" ");
-      const params=new URLSearchParams({format:"jsonv2",q:query,countrycodes:"pe",limit:"40",addressdetails:"1",dedupe:"1"});
-      if(lat&&lon){params.set("viewbox",`${lon-0.7},${lat+0.5},${lon+0.7},${lat-0.5}`);params.set("bounded","1");}
-      const response=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{Accept:"application/json"}});
-      if(!response.ok)throw new Error("No se pudo consultar el mapa. Intenta de nuevo más tarde.");
-      const results=await response.json();
-      const matches=results.filter(item=>/reniec|registro nacional de identificacion/i.test(item.name||item.display_name||""));
-      const nearest=lat&&lon?matches.map(item=>({...item,distance:distanceKm(lat,lon,Number(item.lat),Number(item.lon))})).sort((a,b)=>a.distance-b.distance):matches;
-      setItems(nearest.slice(0,15));
-      setNotice(matches.length?"Resultados encontrados en datos abiertos de OpenStreetMap. Confirma horarios y atención en RENIEC antes de desplazarte.":"No encontramos oficinas RENIEC etiquetadas en este sector de OpenStreetMap. Prueba otra región o consulta el directorio oficial.");
+      const params=new URLSearchParams({region:selectedRegion});
+      if(district.trim())params.set("district",district.trim());
+      if(lat!==undefined&&lon!==undefined){params.set("latitude",String(lat));params.set("longitude",String(lon));}
+      let response;
+      try{response=await fetch(`/api/agencies?${params}`,{headers:{Accept:"application/json"},credentials:"same-origin",signal:AbortSignal.timeout(18000)})}catch(cause){throw new Error(cause.name==="TimeoutError"?"La búsqueda tardó demasiado. Intenta otra vez.":"No se pudo conectar con el servicio del mapa. Comprueba tu conexión e inténtalo otra vez.")}
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error||`No se pudo consultar el mapa (${response.status}).`);
+      const matches=result.items||[];
+      setItems(matches);
+      setNotice(result.notice||"Los resultados vienen de datos abiertos; confirma los detalles en los canales oficiales de RENIEC.");
     }catch(e){setError(e.message||"No se pudo buscar oficinas.")}
     finally{setBusy(false)}
   };
@@ -39,5 +39,4 @@ export default function Agencias({region="Lima"}){
     <div className="agency-layout"><div className="card agency-map-card"><h3>Mapa de referencia</h3><iframe title="Mapa de oficinas en OpenStreetMap" src={mapUrl} loading="lazy" referrerPolicy="no-referrer"/><a href={`https://www.openstreetmap.org/?mlat=${center.lat}&mlon=${center.lon}#map=12/${center.lat}/${center.lon}`} target="_blank" rel="noreferrer">Abrir mapa en OpenStreetMap ↗</a></div><div className="agency-results"><div className="card agency-notice"><b>Importante</b><span>{notice}</span></div>{error&&<p className="form-error" role="alert">{error}</p>}{items.map((item,index)=><article className="card agency-result" key={item.place_id}><div className="agency-result-number">{index+1}</div><div><b>{item.name||"Oficina etiquetada RENIEC"}</b><span>{item.display_name}</span>{Number.isFinite(item.distance)&&<small>Aprox. {item.distance.toFixed(1)} km en línea recta</small>}<a href={`https://www.openstreetmap.org/directions?from=&to=${item.lat}%2C${item.lon}`} target="_blank" rel="noreferrer">Ver ruta ↗</a></div></article>)}{!items.length&&!busy&&<div className="card agency-empty">Elige una región y pulsa «Buscar oficinas» para consultar el mapa.</div>}</div></div>
   </section>;
 }
-function distanceKm(lat1,lon1,lat2,lon2){const r=6371,rad=value=>value*Math.PI/180;const dLat=rad(lat2-lat1),dLon=rad(lon2-lon1);const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLon/2)**2;return 2*r*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
 function fallbackCenter(region){const centers={"Amazonas":[-5.2,-78.5],"Áncash":[-9.5,-77.5],"Apurímac":[-13.6,-72.9],"Arequipa":[-16.4,-71.5],"Ayacucho":[-13.2,-74.2],"Cajamarca":[-7.2,-78.5],"Callao":[-12.05,-77.13],"Cusco":[-13.52,-71.97],"Huancavelica":[-12.8,-74.97],"Huánuco":[-9.93,-76.24],"Ica":[-14.07,-75.73],"Junín":[-11.16,-75.99],"La Libertad":[-8.11,-79.03],"Lambayeque":[-6.77,-79.84],"Lima":[-12.05,-77.04],"Loreto":[-3.75,-73.25],"Madre de Dios":[-12.59,-69.19],"Moquegua":[-17.19,-70.94],"Pasco":[-10.68,-76.26],"Piura":[-5.19,-80.63],"Puno":[-15.84,-70.02],"San Martín":[-6.49,-76.37],"Tacna":[-18.01,-70.25],"Tumbes":[-3.57,-80.45],"Ucayali":[-8.38,-74.53]};const [lat,lon]=centers[region]||centers.Lima;return{lat,lon}}
