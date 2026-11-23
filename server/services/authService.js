@@ -114,7 +114,7 @@ export async function getSessionUser(token) {
   const session = await authRepository.findSession(hashToken(token), Date.now());
   if (!session) return null;
   const user = await authRepository.findUser(session.account_id);
-  return user ? { name: unseal(user.name_cipher), email: user.email } : null;
+  return user ? { name: unseal(user.name_cipher), dni: unseal(user.dni_cipher), email: user.email } : null;
 }
 
 export async function logout(token) {

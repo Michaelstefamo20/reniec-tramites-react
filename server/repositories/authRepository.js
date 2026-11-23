@@ -68,7 +68,7 @@ export const authRepository = {
     return rows[0];
   },
   async findUser(accountId) {
-    const { rows } = await pool.query("SELECT name_cipher,email FROM accounts WHERE id=$1", [accountId]);
+    const { rows } = await pool.query("SELECT name_cipher,dni_cipher,email FROM accounts WHERE id=$1", [accountId]);
     return rows[0];
   },
   async findAccountIdByEmail(email) {

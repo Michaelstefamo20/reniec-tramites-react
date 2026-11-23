@@ -17,6 +17,8 @@ const SERVICES = [
 ];
 const DEFAULT_SERVICES = ["first", "renew", "duplicate", "address", "rectify", "appointment", "offices"];
 
+function maskDni(value="") { const number=String(value||""); return /^\d{8}$/.test(number)?`${number.slice(0,2)} •••• ${number.slice(-2)}`:"•••• ••••"; }
+
 function loadFavorites(key) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || "null");
@@ -24,11 +26,12 @@ function loadFavorites(key) {
   } catch { return DEFAULT_SERVICES; }
 }
 
-export default function Inicio({ go, tr = [], name = "", userId = "guest" }) {
+export default function Inicio({ go, tr = [], name = "", userId = "guest", dni = "" }) {
   const { t } = useLanguage();
   const key = `reniec-shortcuts:${encodeURIComponent(userId || "guest")}`;
   const [favorites, setFavorites] = useState(() => loadFavorites(key));
   const [editing, setEditing] = useState(false);
+  const [showDni,setShowDni]=useState(true);
   const active = tr.find(item => item.e < 3);
 
   useEffect(() => {
@@ -63,15 +66,15 @@ export default function Inicio({ go, tr = [], name = "", userId = "guest" }) {
     </section>
     <div className="citizen-layout">
       <section className="citizen-services" data-tour="services" aria-labelledby="services-title">
-        <div className="section-heading"><div><span className="eyebrow">{t("SERVICIOS Y ORIENTACIÓN")}</span><h3 id="services-title">{t("Trámites disponibles")}</h3></div><button className="text-action" onClick={() => setEditing(value => !value)}>{editing ? t("Terminar") : t("Personalizar accesos")} <span>{editing ? "✓" : "✎"}</span></button></div>
-        {editing && <div className="card service-picker"><b>{t("Elige qué accesos aparecen en tu tablero")}</b><div className="service-picker-list">{SERVICES.map(service => <label key={service.id} className="service-picker-item"><span>{service.icon} {t(service.title)}<small>{t(service.description)}</small></span><input type="checkbox" checked={favorites.includes(service.id)} onChange={() => toggle(service.id)} aria-label={`${t(favorites.includes(service.id) ? "Quitar" : "Agregar")} ${t(service.title)}`}  /></label>)}</div></div>}
+        <div className="section-heading"><div><span className="eyebrow">{t("SERVICIOS Y ORIENTACIÓN")}</span><h3 id="services-title">{t("Trámites disponibles")}</h3></div><button className={`access-settings-button${editing?" is-editing":""}`} onClick={() => setEditing(value => !value)}><span className="access-settings-icon" aria-hidden="true">{editing?"✓":"☷"}</span><span><b>{editing?t("Terminar edición"):t("Personalizar accesos")}</b><small>{editing?t("Guarda tu selección"):t("Elige tus accesos rápidos")}</small></span><span className="access-settings-arrow" aria-hidden="true">{editing?"":"›"}</span></button></div>
+        {editing && <div className="card service-picker"><div className="service-picker-heading"><span className="service-picker-heading-icon">✦</span><div><b>{t("Elige qué accesos aparecen en tu tablero")}</b><small>{t("Tus cambios se guardan en tu cuenta")}</small></div></div><div className="service-picker-list">{SERVICES.map(service => <label key={service.id} className={`service-picker-item${favorites.includes(service.id)?" selected":""}`}><span className="service-picker-item-icon">{service.icon}</span><span className="service-picker-item-copy"><b>{t(service.title)}</b><small>{t(service.description)}</small></span><input type="checkbox" checked={favorites.includes(service.id)} onChange={() => toggle(service.id)} aria-label={`${t(favorites.includes(service.id) ? "Quitar" : "Agregar")} ${t(service.title)}`}  /></label>)}</div><p className="service-picker-hint">{t("Selecciona las opciones que quieres mostrar en tu inicio.")}</p></div>}
         <div className="citizen-service-grid">{visible.map(service => <article className="citizen-service-card" key={service.id}><button className="citizen-service-open" onClick={() => openService(service)}><span className="citizen-service-icon" aria-hidden="true">{service.icon}</span><b>{t(service.title)}</b><span>{t(service.description)}</span><i aria-hidden="true">↗</i></button>{editing && <button className="service-remove" onClick={() => toggle(service.id)}>{t("Quitar del tablero")}</button>}</article>)}
           {!editing && <button className="citizen-service-card citizen-add-card" onClick={() => setEditing(true)}><span className="citizen-service-icon">＋</span><b>{t("Añadir acceso")}</b><span>{t("Personaliza las opciones a tu medida.")}</span></button>}
         </div>
         <div className="citizen-help-strip"><div><b>{t("¿Necesitas orientación?")}</b><span>{t("Revisa las preguntas frecuentes o envía una consulta al equipo del sitio.")}</span></div><button className="btn ghost compact" onClick={() => go("ayuda")}>{t("Preguntas frecuentes")}</button><button className="btn compact" onClick={() => go("soporte")}>{t("Contactar soporte")}</button></div>
       </section>
       <aside className="citizen-rail" data-tour="tracking" aria-label={t("Resumen y seguimiento")}>
-        <section className="card citizen-id-card"><div className="citizen-card-title"><b>{t("Mi DNI")}</b><span className="badge b-w">{t("No vinculado")}</span></div><strong className="citizen-masked-dni">•••• •••• ••</strong><div className="citizen-id-meta"><span>{t("Este prototipo no consulta datos oficiales.")}</span><span>{t("Datos no disponibles")}</span></div></section>
+        <section className="card citizen-id-card"><div className="citizen-card-title"><div><b>{t("Mi DNI")}</b><span className="citizen-id-caption">{t("Número registrado en tu cuenta")}</span></div><span className="badge b-w">{t("Dato personal")}</span></div><div className="citizen-dni-row"><strong className="citizen-masked-dni" aria-label={t(showDni?"DNI visible":"DNI oculto")}>{showDni&&/^\d{8}$/.test(String(dni))?`${dni.slice(0,4)} ${dni.slice(4)}`:maskDni(dni)}</strong><button type="button" className="dni-reveal-button" onClick={()=>setShowDni(value=>!value)} aria-pressed={showDni} aria-label={t(showDni?"Ocultar DNI":"Mostrar DNI")}>{showDni?"◉":"◎"}<span>{t(showDni?"Ocultar":"Mostrar")}</span></button></div><div className="citizen-id-meta"><span>{t("Solo visible en tu cuenta")}</span><span>{t("No consultado con RENIEC")}</span></div></section>
         <section className="card citizen-progress-card"><div className="citizen-card-title"><div><b>{t("Trámite en curso")}</b><span className="citizen-caption">{active ? t("Actividad de ejemplo") : t("Aún no hay actividad")}</span></div><span className="badge b-w">{t("Demostración")}</span></div>
           {active ? <><div className="citizen-steps"><div className="citizen-step is-done"><i>✓</i><span><b>{t("Solicitud de ejemplo")}</b><small>{t(active.n)}</small></span></div><div className="citizen-step is-current"><i>2</i><span><b>{t(ESTADOS[active.e])}</b><small>{t("No consultado con RENIEC")}</small></span></div><div className="citizen-step"><i>3</i><span><b>{t("Próximo paso")}</b><small>{t("Depende del trámite real")}</small></span></div><div className="citizen-step"><i>4</i><span><b>{t("Finalización")}</b><small>{t("Estado oficial no disponible")}</small></span></div></div><button className="btn citizen-wide-button" onClick={() => go("mis")}>{t("Ver actividad de ejemplo")}</button></> : <p className="muted-line">{t("Cuando uses las funciones del prototipo, la actividad local aparecerá aquí.")}</p>}
         </section>
