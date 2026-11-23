@@ -12,6 +12,7 @@ import Soporte from "./Soporte.jsx";
 import PanelAdmin from "./PanelAdmin.jsx";
 import Agencias from "./Agencias.jsx";
 import Cuenta from "./Cuenta.jsx";
+import AppSplash from "./AppSplash.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
 import Onboarding from "./Onboarding.jsx";
 import { authApi } from "../services/authApi.js";
@@ -21,6 +22,7 @@ export default function Shell(){
   const [view,setView]=useState("registro");
   const [user,setUser]=useState(null);
   const [authChecking,setAuthChecking]=useState(true);
+  const [showSplash,setShowSplash]=useState(()=>!sessionStorage.getItem("reniec-splash-seen"));
   const [showTour,setShowTour]=useState(false);
   const [notifications,setNotifications]=useState([]);
   const [notificationsLoading,setNotificationsLoading]=useState(false);
@@ -113,6 +115,7 @@ export default function Shell(){
   const refreshNotifications=async()=>{setNotificationsLoading(true);try{const result=await authApi.notifications();setNotifications(result.notifications||[])}catch{}finally{setNotificationsLoading(false)}};
   const openNotification=async item=>{if(!item.read_at){await authApi.markNotificationRead(item.id).catch(()=>{});setNotifications(current=>current.map(notification=>notification.id===item.id?{...notification,read_at:new Date().toISOString()}:notification))}setBell(false);go(item.destination||"inicio")};
   const markAllNotificationsRead=async()=>{await authApi.markAllNotificationsRead().catch(()=>{});setNotifications(current=>current.map(item=>item.read_at?item:{...item,read_at:new Date().toISOString()}))};
+  if(showSplash)return <AppSplash onFinish={()=>{sessionStorage.setItem("reniec-splash-seen","true");setShowSplash(false)}}/>;
   if(authChecking)return <main className="auth-page"><div className="auth-card">Cargando tu cuenta…</div></main>;
   if(!user)return <Registro onRegister={registerDemo}/>;
   return(<div className="app">
