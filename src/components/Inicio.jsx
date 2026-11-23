@@ -31,7 +31,7 @@ export default function Inicio({ go, tr = [], name = "", userId = "guest", dni =
   const key = `reniec-shortcuts:${encodeURIComponent(userId || "guest")}`;
   const [favorites, setFavorites] = useState(() => loadFavorites(key));
   const [editing, setEditing] = useState(false);
-  const [showDni,setShowDni]=useState(false);
+  const [showDni,setShowDni]=useState(true);
   const active = tr.find(item => item.e < 3);
 
   useEffect(() => {
