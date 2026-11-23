@@ -1,4 +1,5 @@
 import pg from "pg";
+import { seal } from "../utils/crypto.js";
 import { env } from "./env.js";
 
 const { Pool } = pg;
@@ -11,6 +12,21 @@ export const pool = env.databaseUrl
       connectionTimeoutMillis: 5_000,
     })
   : null;
+
+async function migrateSensitiveFields() {
+  const families=await pool.query("SELECT id,name,relationship FROM family_members WHERE name_cipher IS NULL OR relationship_cipher IS NULL");
+  for(const row of families.rows){
+    await pool.query("UPDATE family_members SET name_cipher=COALESCE(name_cipher,$1),relationship_cipher=COALESCE(relationship_cipher,$2),name='',relationship='' WHERE id=$3",[row.name?seal(row.name):seal(""),row.relationship?seal(row.relationship):seal(""),row.id]);
+  }
+  const inquiries=await pool.query("SELECT id,subject,message,staff_reply FROM support_inquiries WHERE subject_cipher IS NULL OR message_cipher IS NULL OR (staff_reply IS NOT NULL AND staff_reply_cipher IS NULL)");
+  for(const row of inquiries.rows){
+    await pool.query("UPDATE support_inquiries SET subject_cipher=COALESCE(subject_cipher,$1),message_cipher=COALESCE(message_cipher,$2),staff_reply_cipher=CASE WHEN staff_reply IS NULL THEN NULL ELSE COALESCE(staff_reply_cipher,$3) END,subject='',message='',staff_reply=NULL WHERE id=$4",[seal(row.subject||""),seal(row.message||""),row.staff_reply?seal(row.staff_reply):null,row.id]);
+  }
+  const notifications=await pool.query("SELECT id,title,message FROM user_notifications WHERE title_cipher IS NULL OR message_cipher IS NULL");
+  for(const row of notifications.rows){
+    await pool.query("UPDATE user_notifications SET title_cipher=COALESCE(title_cipher,$1),message_cipher=COALESCE(message_cipher,$2),title='',message='' WHERE id=$3",[seal(row.title||""),seal(row.message||""),row.id]);
+  }
+}
 
 export async function initializeDatabase() {
   if (!pool) {
@@ -51,6 +67,9 @@ export async function initializeDatabase() {
         status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','resolved')),
         staff_reply TEXT,
         staff_email TEXT,
+        subject_cipher TEXT,
+        message_cipher TEXT,
+        staff_reply_cipher TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         resolved_at TIMESTAMPTZ
@@ -64,10 +83,17 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS family_members (
         id BIGSERIAL PRIMARY KEY,
         account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        relationship TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT '',
+        relationship TEXT NOT NULL DEFAULT '',
+        name_cipher TEXT,
+        relationship_cipher TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE family_members ADD COLUMN IF NOT EXISTS name_cipher TEXT;
+      ALTER TABLE family_members ADD COLUMN IF NOT EXISTS relationship_cipher TEXT;
+      ALTER TABLE support_inquiries ADD COLUMN IF NOT EXISTS subject_cipher TEXT;
+      ALTER TABLE support_inquiries ADD COLUMN IF NOT EXISTS message_cipher TEXT;
+      ALTER TABLE support_inquiries ADD COLUMN IF NOT EXISTS staff_reply_cipher TEXT;
       CREATE INDEX IF NOT EXISTS family_members_account_idx ON family_members(account_id,created_at);
       CREATE TABLE IF NOT EXISTS user_tutorials (
         account_id BIGINT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -83,11 +109,16 @@ export async function initializeDatabase() {
         destination TEXT NOT NULL DEFAULT 'inicio',
         entity_key TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        read_at TIMESTAMPTZ
+        read_at TIMESTAMPTZ,
+        title_cipher TEXT,
+        message_cipher TEXT
       );
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS title_cipher TEXT;
+      ALTER TABLE user_notifications ADD COLUMN IF NOT EXISTS message_cipher TEXT;
       CREATE INDEX IF NOT EXISTS user_notifications_account_created_idx ON user_notifications(account_id,created_at DESC);
       CREATE UNIQUE INDEX IF NOT EXISTS user_notifications_entity_key_idx ON user_notifications(account_id,entity_key) WHERE entity_key IS NOT NULL;
     `);
+    await migrateSensitiveFields();
     console.log("PostgreSQL connection ready.");
     return true;
   } catch (error) {

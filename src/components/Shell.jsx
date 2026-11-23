@@ -23,6 +23,7 @@ export default function Shell(){
   const [showTour,setShowTour]=useState(false);
   const [notifications,setNotifications]=useState([]);
   const [notificationsLoading,setNotificationsLoading]=useState(false);
+  const [connectionLost,setConnectionLost]=useState(false);
   const [tr,setTr]=useState(SEED);
   const [pre,setPre]=useState({t:null,f:1,k:0,familyMember:null});
   const [big,setBig]=useState(false);
@@ -45,6 +46,29 @@ export default function Shell(){
   useEffect(()=>{
     if(!user?.email)return;
     let alive=true;
+    const offlineKey=`reniec-offline-since:${encodeURIComponent(user.email)}`;
+    const checkConnection=async()=>{
+      try{
+        const response=await fetch("/api/health",{cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(8000)});
+        if(!response.ok)throw new Error("health check failed");
+        const since=sessionStorage.getItem(offlineKey);
+        if(since&&Date.now()-Number(since)>=180000){await authApi.logout().catch(()=>{});if(alive){sessionStorage.removeItem(offlineKey);setConnectionLost(false);setUser(null);setFamilyMembers([]);setNotifications([]);setTr([]);setBell(false);setView("registro")};return}
+        sessionStorage.removeItem(offlineKey);
+        if(alive)setConnectionLost(false);
+      }catch{
+        let since=Number(sessionStorage.getItem(offlineKey));
+        if(!since||!Number.isFinite(since)){since=Date.now();sessionStorage.setItem(offlineKey,String(since))}
+        if(alive)setConnectionLost(true);
+        if(Date.now()-since>=180000&&alive){await authApi.logout().catch(()=>{});sessionStorage.removeItem(offlineKey);setConnectionLost(false);setUser(null);setFamilyMembers([]);setNotifications([]);setTr([]);setBell(false);setView("registro")}
+      }
+    };
+    checkConnection();
+    const timer=setInterval(checkConnection,15000);
+    return()=>{alive=false;clearInterval(timer)};
+  },[user?.email]);
+  useEffect(()=>{
+    if(!user?.email)return;
+    let alive=true;
     const poll=async()=>{try{const result=await authApi.notifications();if(alive)setNotifications(result.notifications||[])}catch{}};
     poll();
     const timer=setInterval(poll,30000);
@@ -61,7 +85,17 @@ export default function Shell(){
       return;
     }
     authApi.currentUser()
-      .then(data=>{setUser(data.user);setView("inicio")})
+      .then(async data=>{
+        const offlineKey=`reniec-offline-since:${encodeURIComponent(data.user.email)}`;
+        const since=Number(sessionStorage.getItem(offlineKey));
+        if(since&&Number.isFinite(since)&&Date.now()-since>=180000){
+          sessionStorage.removeItem(offlineKey);
+          await authApi.logout().catch(()=>{});
+          setView("registro");
+          return;
+        }
+        setUser(data.user);setView("inicio");
+      })
       .catch(()=>{})
       .finally(()=>setAuthChecking(false));
   },[]);
@@ -70,7 +104,7 @@ export default function Shell(){
   const addCita=c=>setCitas(l=>[c,...l]);
   const closeTour=async outcome=>{try{await authApi.completeTutorial(outcome)}catch{}setShowTour(false)};
   const registerDemo=profile=>{setUser(profile);setView("inicio")};
-  const logout=async()=>{try{await authApi.logout()}finally{setUser(null);setView("registro")}};
+  const logout=async()=>{try{await authApi.logout()}finally{setUser(null);setFamilyMembers([]);setNotifications([]);setTr([]);setBell(false);setView("registro")}};
   const chooseRegion=value=>{setRegion(value);const suggested=["Puno","Tacna","Moquegua"].includes(value)?"ay":["Apurímac","Ayacucho","Cusco","Huancavelica","Huánuco","Junín","Áncash","Arequipa","Lima","Pasco"].includes(value)?"qu":"es";setLanguage(suggested)};
   const unreadCount=notifications.filter(item=>!item.read_at).length;
   const refreshNotifications=async()=>{setNotificationsLoading(true);try{const result=await authApi.notifications();setNotifications(result.notifications||[])}catch{}finally{setNotificationsLoading(false)}};
@@ -88,6 +122,7 @@ export default function Shell(){
       <button className="tog citizen-logout" onClick={logout} aria-label={t("Cerrar sesión")}>{t("Cerrar sesión")}</button></div>
       {bell&&<div className="card notification-menu" role="region" aria-label={t("Bandeja de notificaciones")}><div className="notification-menu-head"><div><b>{t("Notificaciones")}</b><span>{unreadCount?`${unreadCount} ${t("sin leer")}`:t("Todo al día")}</span></div><div><button onClick={refreshNotifications} disabled={notificationsLoading} aria-label={t("Actualizar notificaciones")}>{notificationsLoading?"…":"↻"}</button>{unreadCount>0&&<button onClick={markAllNotificationsRead}>{t("Marcar todas leídas")}</button>}</div></div>{notifications.length?notifications.map(item=><button key={item.id} className={`notification-item${item.read_at?"":" unread"}`} onClick={()=>openNotification(item)}><i aria-hidden="true"/><span><b>{item.title}</b><small>{item.message}</small><time>{new Date(item.created_at).toLocaleString("es-PE",{dateStyle:"short",timeStyle:"short"})}</time></span></button>):<div className="notification-empty"><span aria-hidden="true">♧</span><b>{t("Tu bandeja está vacía")}</b><small>{t("Aquí aparecerán avisos sobre tu cuenta, familiares y consultas de soporte.")}</small></div>}<p className="notification-disclaimer">{t("Avisos de este sitio; no son notificaciones oficiales de RENIEC.")}</p></div>}
       {locationNotice&&<div className="location-toast" role="status"><b>{locationNotice.error?t("Ubicación no disponible"):`${t("Región detectada:")} ${t(locationNotice.region)}`}</b><span>{locationNotice.error?t(locationNotice.error):`${t(locationNotice.suggestLanguage?"Idioma cambiado a":"Idioma sugerido:")} ${t(locationNotice.language==="ay"?"Aimara":locationNotice.language==="qu"?"Quechua":"Español")}. ${t("Puedes modificarlo en cualquier momento.")}`}</span>{locationNotice.error&&<button className="text-action" onClick={()=>go("ayuda")}>Ayuda con ubicación</button>}<button className="notice-close" onClick={()=>setLocationNotice(null)} aria-label={t("Cerrar aviso")}>×</button></div>}</header>
+    {connectionLost&&<div className="offline-security-notice" role="alert"><span aria-hidden="true">◉</span><span><b>{t("Sin conexión")}</b><small>{t("La sesión se cerrará automáticamente tras tres minutos sin conexión.")}</small></span></div>}
     <div className="content">
       {view==="inicio"&&<Inicio go={go} tr={tr} load={load} name={user?.name} userId={user?.email} dni={user?.dni}/>}
       {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} familyMember={pre.familyMember} familyMembers={familyMembers} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
