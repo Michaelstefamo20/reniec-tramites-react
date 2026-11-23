@@ -57,6 +57,37 @@ export const authRepository = {
   async updatePassword(client, accountId, passwordHash) {
     await client.query("UPDATE accounts SET password_hash=$1 WHERE id=$2", [passwordHash, accountId]);
   },
+  async findPasswordForAccount(accountId){
+    const {rows}=await pool.query("SELECT password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL",[accountId]);
+    return rows[0]?.password_hash||null;
+  },
+  async updatePasswordForAccount(accountId,passwordHash){
+    await pool.query("UPDATE accounts SET password_hash=$1 WHERE id=$2",[passwordHash,accountId]);
+  },
+  async setPendingEmail(accountId,email){
+    await pool.query("UPDATE accounts SET pending_email=$1 WHERE id=$2",[email,accountId]);
+  },
+  async clearPendingEmailForClient(client,accountId){
+    await client.query("UPDATE accounts SET pending_email=NULL WHERE id=$1",[accountId]);
+  },
+  async getAccountSecurity(accountId){
+    const {rows}=await pool.query("SELECT email,pending_email,verified_at FROM accounts WHERE id=$1",[accountId]);
+    return rows[0]||null;
+  },
+  async findAccountWithPassword(accountId){
+    const {rows}=await pool.query("SELECT email,password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL",[accountId]);
+    return rows[0]||null;
+  },
+  async findPendingEmailToken(client,tokenHash,now){
+    const {rows}=await client.query("SELECT t.account_id,a.pending_email FROM tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=$1 AND t.purpose='change-email' AND t.expires_at>$2 AND a.pending_email IS NOT NULL FOR UPDATE OF t,a",[tokenHash,now]);
+    return rows[0];
+  },
+  async applyPendingEmail(client,accountId,email){
+    await client.query("UPDATE accounts SET email=$1,pending_email=NULL WHERE id=$2",[email,accountId]);
+  },
+  async clearPendingEmail(accountId){
+    await pool.query("UPDATE accounts SET pending_email=NULL WHERE id=$1",[accountId]);
+  },
   async clearRecoveryTokens(client, accountId) {
     await client.query("DELETE FROM tokens WHERE account_id=$1 AND purpose IN ('reset-password','setup-password')", [accountId]);
   },
@@ -68,8 +99,15 @@ export const authRepository = {
     return rows[0];
   },
   async findUser(accountId) {
-    const { rows } = await pool.query("SELECT name_cipher,dni_cipher,email FROM accounts WHERE id=$1", [accountId]);
+    const { rows } = await pool.query("SELECT name_cipher,dni_cipher,email,pending_email FROM accounts WHERE id=$1", [accountId]);
     return rows[0];
+  },
+  async getAccountCredentials(accountId){
+    const {rows}=await pool.query("SELECT email,password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL",[accountId]);
+    return rows[0]||null;
+  },
+  async deleteTokensForPurpose(accountId,purpose){
+    await pool.query("DELETE FROM tokens WHERE account_id=$1 AND purpose=$2",[accountId,purpose]);
   },
   async findAccountIdByEmail(email) {
     const { rows } = await pool.query("SELECT id FROM accounts WHERE email=$1", [email]);

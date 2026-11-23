@@ -4,10 +4,11 @@ const query = new URLSearchParams(location.search);
 const activationToken = query.get("token");
 const activationAction = query.get("action") || (query.get("setup") === "1" ? "setup-password" : "");
 const activationMode = activationAction === "setup-password" && Boolean(activationToken);
-const resetMode = Boolean(activationToken) && !activationMode;
+const emailChangeMode=activationAction==="change-email"&&Boolean(activationToken);
+const resetMode = Boolean(activationToken) && !activationMode&&!emailChangeMode;
 
 export default function Registro({ onRegister }) {
-  const [mode, setMode] = useState(() => activationMode ? "setup" : resetMode ? "reset" : "register");
+  const [mode, setMode] = useState(() => activationMode ? "setup" : emailChangeMode?"confirm-email":resetMode ? "reset" : "register");
   const [name, setName] = useState("");
   const [dni, setDni] = useState("");
   const [email, setEmail] = useState("");
@@ -20,7 +21,8 @@ export default function Registro({ onRegister }) {
     event.preventDefault(); setError(""); setStatus(""); setBusy(true);
     try {
       let action;
-      if (mode === "register") {
+      if(mode==="confirm-email")action=()=>authApi.confirmEmailChange(activationToken);
+      else if (mode === "register") {
         const cleanName = name.trim().replace(/\s+/g, " ");
         if (cleanName.split(" ").length < 2 || cleanName.length > 100) throw new Error("Ingresa tus nombres y apellidos.");
         if (!/^\d{8}$/.test(dni)) throw new Error("El DNI debe tener exactamente 8 dígitos.");
@@ -38,7 +40,9 @@ export default function Registro({ onRegister }) {
         action = () => authApi.resetPassword({ token: activationToken, password });
       }
       const data = await action();
-      if (mode === "register") {
+      if(mode==="confirm-email"){
+        setMode("login");setEmail(data.email||"");setPassword("");setStatus(data.message||"Correo actualizado. Inicia sesión otra vez con tu nuevo correo.");history.replaceState({},"",location.pathname);
+      }else if (mode === "register") {
         setStatus("Te enviamos un enlace a tu correo. Ábrelo para crear tu contraseña y activar la cuenta.");
         setDni(""); setPassword("");
       } else if (mode === "setup") {
@@ -56,8 +60,8 @@ export default function Registro({ onRegister }) {
     } finally { setBusy(false); }
   };
 
-  const title = mode === "register" ? "Crea tu cuenta" : mode === "login" ? "Ingresa a tu cuenta" : mode === "forgot" ? "Recupera tu acceso" : mode === "setup" ? "Activa tu cuenta" : "Restablece tu contraseña";
-  const lead = mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Usa el enlace de recuperación para crear una contraseña nueva.";
+  const title = mode === "confirm-email"?"Confirma tu correo nuevo":mode === "register" ? "Crea tu cuenta" : mode === "login" ? "Ingresa a tu cuenta" : mode === "forgot" ? "Recupera tu acceso" : mode === "setup" ? "Activa tu cuenta" : "Restablece tu contraseña";
+  const lead = mode === "confirm-email"?"Al continuar, confirmas que tienes acceso al nuevo correo de tu cuenta.":mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Usa el enlace de recuperación para crear una contraseña nueva.";
 
   return <main className="auth-page">
     <section className="auth-card">
@@ -67,6 +71,7 @@ export default function Registro({ onRegister }) {
       <p className="auth-lead">{lead}</p>
       <div className="security-notice"><b>Protección de tu cuenta</b><span>La contraseña se crea dentro del sitio después de abrir el enlace. Nunca la enviaremos por correo. La validación oficial de identidad requiere una integración autorizada con RENIEC.</span></div>
       <form onSubmit={submit} noValidate>
+        {mode==="confirm-email"&&<div className="security-notice"><b>Confirmación segura</b><span>El correo solo cambiará tras confirmar el enlace válido, de un solo uso y con tiempo limitado.</span></div>}
         {mode === "register" && <>
           <label htmlFor="reg-name">Nombres y apellidos</label>
           <input id="reg-name" type="text" autoComplete="name" maxLength={100} value={name} onChange={e=>setName(e.target.value.replace(/[<>]/g,""))} required placeholder="Como aparecen en tu DNI" />
@@ -85,7 +90,7 @@ export default function Registro({ onRegister }) {
         </>}
         {error&&<p className="form-error" role="alert">{error}</p>}
         {status&&<p className="form-status" role="status">{status}</p>}
-        <button className="btn auth-submit" type="submit" disabled={busy || ((mode === "setup" || mode === "reset") && !activationToken)}>{busy?"Procesando…":mode === "register"?"Enviar enlace de activación":mode === "login"?"Iniciar sesión":mode === "forgot"?"Enviar enlace":mode === "setup"?"Crear contraseña y activar":"Actualizar contraseña"}</button>
+        <button className="btn auth-submit" type="submit" disabled={busy || ((mode === "setup" || mode === "reset"||mode==="confirm-email") && !activationToken)}>{busy?"Procesando…":mode==="confirm-email"?"Confirmar correo y volver a iniciar sesión":mode === "register"?"Enviar enlace de activación":mode === "login"?"Iniciar sesión":mode === "forgot"?"Enviar enlace":mode === "setup"?"Crear contraseña y activar":"Actualizar contraseña"}</button>
       </form>
       {mode === "login"&&<button className="auth-text-link" onClick={()=>{setMode("forgot");setError("");setStatus("")}}>Olvidé mi contraseña</button>}
       {mode === "forgot"&&<button className="auth-text-link" onClick={()=>{setMode("login");setError("");setStatus("")}}>Volver a iniciar sesión</button>}

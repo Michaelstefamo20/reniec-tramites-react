@@ -1,4 +1,4 @@
-import { AuthError, getSessionUser, login, logout, register, requestPasswordReset, resetPassword, setupPassword, verifyEmail } from "../services/authService.js";
+import { AuthError, cancelPendingEmailChange, changePassword, confirmEmailChange, getSessionUser, login, logout, register, requestEmailChange, requestPasswordReset, resetPassword, setupPassword, verifyEmail } from "../services/authService.js";
 import { authRepository } from "../repositories/authRepository.js";
 import { emailConfigurationError } from "../config/mailer.js";
 import { cookieOptions } from "../utils/http.js";
@@ -43,6 +43,24 @@ export const forgotPasswordController = asyncHandler(async (req, res) => {
   }
 });
 export const resetPasswordController = asyncHandler((req, res) => respond(res, () => resetPassword(req.body || {}, () => res.clearCookie("reniec_session", cookieOptions(0)))));
+export const changePasswordController = asyncHandler(async(req,res)=>{
+  try{const result=await changePassword(req.accountId,req.body||{});res.clearCookie("reniec_session",cookieOptions(0));res.json(result)}
+  catch(error){if(error instanceof AuthError)return res.status(error.status).json({error:error.message});throw error}
+});
+export const requestEmailChangeController = asyncHandler(async(req,res)=>{
+  try{res.json(await requestEmailChange(req.accountId,req.body||{}))}
+  catch(error){if(error instanceof AuthError)return res.status(error.status).json({error:error.message});console.error("Email change request failed:",error.code||error.message);res.status(503).json({error:emailConfigurationError()})}
+});
+export const cancelEmailChangeController = asyncHandler((req,res)=>respond(res,()=>cancelPendingEmailChange(req.accountId)));
+export const accountSecurityController = asyncHandler(async(req,res)=>{
+  const security=await authRepository.getAccountSecurity(req.accountId);
+  if(!security)return res.status(404).json({error:"No se encontró la cuenta."});
+  res.json({pendingEmail:security.pending_email||null,emailVerified:Boolean(security.verified_at)});
+});
+export const confirmEmailChangeController = asyncHandler(async(req,res)=>{
+  try{const result=await confirmEmailChange(req.body?.token);res.clearCookie("reniec_session",cookieOptions(0));res.json(result)}
+  catch(error){if(error instanceof AuthError)return res.status(error.status).json({error:error.message});throw error}
+});
 export const meController = asyncHandler(async (req, res) => {
   const user = await getSessionUser(req.cookies?.reniec_session);
   if (!user) { res.clearCookie("reniec_session", cookieOptions(0)); return res.status(401).json({ error: "La sesión venció. Inicia sesión otra vez." }); }

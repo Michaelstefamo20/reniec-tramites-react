@@ -58,6 +58,7 @@ export async function initializeDatabase() {
         expires_at BIGINT NOT NULL
       );
       ALTER TABLE accounts ALTER COLUMN password_hash DROP NOT NULL;
+      ALTER TABLE accounts ADD COLUMN IF NOT EXISTS pending_email TEXT;
       CREATE TABLE IF NOT EXISTS support_inquiries (
         id BIGSERIAL PRIMARY KEY,
         public_id UUID NOT NULL UNIQUE,

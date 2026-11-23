@@ -11,6 +11,7 @@ import Assistant from "./Assistant.jsx";
 import Soporte from "./Soporte.jsx";
 import PanelAdmin from "./PanelAdmin.jsx";
 import Agencias from "./Agencias.jsx";
+import Cuenta from "./Cuenta.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
 import Onboarding from "./Onboarding.jsx";
 import { authApi } from "../services/authApi.js";
@@ -77,7 +78,9 @@ export default function Shell(){
   useEffect(()=>{
     const params = new URLSearchParams(window.location.search);
     const action = params.get("action");
+    const hasEmailChangeLink=Boolean(params.get("token"))&&action==="change-email";
     const hasPasswordLink = Boolean(params.get("token")) && ["setup-password", "reset-password"].includes(action);
+    if (hasEmailChangeLink){setUser(null);setView("registro");setAuthChecking(false);return}
     if (hasPasswordLink) {
       setUser(null);
       setView("registro");
@@ -114,7 +117,7 @@ export default function Shell(){
   if(!user)return <Registro onRegister={registerDemo}/>;
   return(<div className="app">
   <div className="main">
-    <header className="citizen-header"><button className="citizen-brand" data-tour="brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>{t("Mi DNI en línea")}</b><small>{t("Portal de orientación")}</small></span></button><nav className="citizen-top-nav" data-tour="navigation" aria-label={t("Navegación principal")}>{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["agencias","Oficinas"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{t(label)}</button>)}</nav><div className="citizen-profile"><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||t("Mi cuenta")}</span></div>
+    <header className="citizen-header"><button className="citizen-brand" data-tour="brand" onClick={()=>go("inicio")} aria-label="Ir al inicio"><img className="logo logo-m" src={LOGO} alt="RENIEC"/><span><b>{t("Mi DNI en línea")}</b><small>{t("Portal de orientación")}</small></span></button><nav className="citizen-top-nav" data-tour="navigation" aria-label={t("Navegación principal")}>{[["inicio","Inicio"],["nuevo","Trámites"],["mis","Mis trámites"],["familia","Mi familia"],["agencias","Oficinas"],["ayuda","Ayuda"]].map(([id,label])=><button key={id} className={view===id?"active":""} onClick={()=>go(id)}>{t(label)}</button>)}</nav><button className="citizen-profile" data-tour="account" onClick={()=>go("cuenta")} aria-label={t("Configuración de la cuenta")} title={t("Configuración de la cuenta")}><span className="citizen-avatar">{(user?.name||user?.email||"U").trim().charAt(0).toUpperCase()}</span><span className="citizen-user-name">{user?.name?.split(" ")[0]||t("Mi cuenta")}</span><span className="citizen-profile-chevron" aria-hidden="true">⌄</span></button>
       <div className="header-actions" data-tour="preferences"><label className="sr-only" htmlFor="language-select">Idioma</label><select id="language-select" value={language} onChange={e=>setLanguage(e.target.value)} aria-label={t("Seleccionar idioma")}>{languages.map(l=><option key={l.code} value={l.code}>{t(l.name)}{l.code===suggestedLanguage?` · ${t("sugerido")}`:""}</option>)}</select>
       <button className="tog notification-bell" onClick={()=>{const next=!bell;setBell(next);if(next)refreshNotifications()}} aria-label={`${t("Notificaciones")}, ${unreadCount} ${t("sin leer")}`} aria-expanded={bell}>🔔 {unreadCount>0&&<span className="notification-count">{unreadCount>99?"99+":unreadCount}</span>}</button>
       <label className="sr-only" htmlFor="region-select">{t("Región del Perú")}</label><select id="region-select" className="region-select" value={region} onChange={event=>chooseRegion(event.target.value)} aria-label={t("Elegir región del Perú")}>{regions.map(item=><option key={item} value={item}>{item}</option>)}</select>
@@ -128,13 +131,14 @@ export default function Shell(){
       {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} familyMember={pre.familyMember} familyMembers={familyMembers} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
       {view==="mis"&&<Mis tr={tr} adv={adv}/>}
       {view==="familia"&&<div data-tour="family"><Familia go={go} citas={citas} addCita={addCita} onMembersChange={setFamilyMembers}/></div>}
+      {view==="cuenta"&&<Cuenta user={user} onLogout={logout} onUserUpdate={setUser}/>}
       {view==="agencias"&&<div data-tour="offices"><Agencias region={region}/></div>}
       {view==="ayuda"&&<Ayuda big={big} setBig={setBig} load={load} setLoad={setLoad} setOpen={setOpen}/>}
       {view==="soporte"&&<Soporte/>}
       {view==="admin"&&<PanelAdmin user={user} onBack={()=>go("inicio")}/>}
     </div></div>
   {user?.isAdmin&&<button className="admin-shortcut" onClick={()=>go("admin")}>Panel de atención</button>}
-  <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["agencias","⌖","Oficinas"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
+  <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["agencias","⌖","Oficinas"],["cuenta","◉","Cuenta"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
   <div className="assist" data-tour="assistant"><button className="fab" onClick={()=>setOpen(true)}><span className="av2">💬</span><span><b>Asistente virtual</b><br/><small>Ayuda por texto o voz</small></span></button></div>
   <Assistant hint={HINT[view]||"Puedo orientarte sobre navegación, idiomas y trámites incluidos en este prototipo."} open={open} setOpen={setOpen} load={load} region={region} language={language} onHelp={()=>go("ayuda")}/>
   {showTour&&<Onboarding onClose={closeTour} onNavigate={view=>view&&setView(view)}/>}

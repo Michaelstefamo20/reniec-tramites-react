@@ -75,6 +75,68 @@ export async function requestPasswordReset(email, sendEmail = sendActionEmail) {
   return { message: "Si existe una cuenta verificada para ese correo, enviaremos un enlace." };
 }
 
+export async function changePassword(accountId,{currentPassword,newPassword}){
+  if(typeof newPassword!=="string"||!validPassword(newPassword))throw new AuthError(400,"La contraseña nueva debe tener 12 caracteres, mayúscula, minúscula, número y símbolo.");
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    const {rows}=await client.query("SELECT password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL FOR UPDATE",[accountId]);
+    const existing=rows[0]?.password_hash;
+    if(!existing||!(await verifyPassword(String(currentPassword||""),existing)))throw new AuthError(401,"La contraseña actual no es correcta.");
+    await client.query("UPDATE accounts SET password_hash=$1 WHERE id=$2",[await passwordHash(newPassword),accountId]);
+    await client.query("DELETE FROM sessions WHERE account_id=$1",[accountId]);
+    await client.query("COMMIT");
+    return{message:"Contraseña actualizada. Inicia sesión de nuevo en tus dispositivos."};
+  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error}finally{client.release()}
+}
+
+export async function requestEmailChange(accountId,{currentPassword,newEmail}){
+  const cleanEmail=typeof newEmail==="string"?normalizeEmail(newEmail):"";
+  if(!validEmail(cleanEmail))throw new AuthError(400,"Ingresa un correo electrónico válido.");
+  const client=await pool.connect();
+  const token=randomBytes(32).toString("base64url");
+  try{
+    await client.query("BEGIN");
+    const {rows}=await client.query("SELECT id,email,password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL FOR UPDATE",[accountId]);
+    const account=rows[0];
+    if(!account||!(await verifyPassword(String(currentPassword||""),account.password_hash)))throw new AuthError(401,"La contraseña actual no es correcta.");
+    if(cleanEmail===account.email)throw new AuthError(400,"El correo nuevo debe ser distinto del actual.");
+    const duplicate=await client.query("SELECT id FROM accounts WHERE email=$1 AND id<>$2",[cleanEmail,accountId]);
+    if(account.pending_email&&account.pending_email!==cleanEmail)throw new AuthError(409,"Ya hay un cambio de correo pendiente. Confírmalo o cancélalo primero.");
+    if(duplicate.rows.length)throw new AuthError(409,"Ese correo ya está asociado a otra cuenta.");
+    await client.query("UPDATE accounts SET pending_email=$1 WHERE id=$2",[cleanEmail,accountId]);
+    await client.query("DELETE FROM tokens WHERE account_id=$1 AND purpose='change-email'",[accountId]);
+    await client.query("INSERT INTO tokens(token_hash,account_id,purpose,expires_at,created_at) VALUES($1,$2,'change-email',$3,$4)",[hashToken(token),accountId,Date.now()+30*60*1000,Date.now()]);
+    await client.query("COMMIT");
+  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error}finally{client.release()}
+  try{await sendActionEmail({id:accountId,email:cleanEmail},"change-email",token)}catch(error){await authRepository.clearPendingEmail(accountId).catch(()=>{});await authRepository.deleteTokensForPurpose(accountId,"change-email").catch(()=>{});throw error}
+  return{message:"Enviamos un enlace de confirmación al nuevo correo. Tu correo actual seguirá activo hasta que lo confirmes."};
+}
+
+export async function confirmEmailChange(token){
+  const client=await pool.connect();
+  try{
+    await client.query("BEGIN");
+    const hash=hashToken(String(token||""));
+    const pending=await authRepository.findPendingEmailToken(client,hash,Date.now());
+    if(!pending)throw new AuthError(400,"El enlace para cambiar el correo no es válido o venció.");
+    const duplicate=await client.query("SELECT id FROM accounts WHERE email=$1 AND id<>$2 FOR UPDATE",[pending.pending_email,pending.account_id]);
+    if(duplicate.rows.length)throw new AuthError(409,"Ese correo ya está asociado a otra cuenta.");
+    await authRepository.applyPendingEmail(client,pending.account_id,pending.pending_email);
+    await authRepository.consumeToken(client,hash);
+    await authRepository.clearSessions(client,pending.account_id);
+    await client.query("COMMIT");
+    return{message:"Correo actualizado y confirmado. Inicia sesión con tu nuevo correo.",email:pending.pending_email};
+  }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error}
+  finally{client.release()}
+}
+
+export async function cancelPendingEmailChange(accountId){
+  await authRepository.clearPendingEmail(accountId);
+  await authRepository.deleteTokensForPurpose(accountId,"change-email");
+  return{message:"El cambio de correo pendiente fue cancelado."};
+}
+
 export async function resetPassword({ token, password }, clearSession) {
   if (!validPassword(password)) throw new AuthError(400, "La contraseña no cumple los requisitos de seguridad.");
   const client = await pool.connect();
@@ -114,7 +176,7 @@ export async function getSessionUser(token) {
   const session = await authRepository.findSession(hashToken(token), Date.now());
   if (!session) return null;
   const user = await authRepository.findUser(session.account_id);
-  return user ? { name: unseal(user.name_cipher), dni: unseal(user.dni_cipher), email: user.email } : null;
+  return user ? { name: unseal(user.name_cipher), dni: unseal(user.dni_cipher), email: user.email, pendingEmail:user.pending_email||null } : null;
 }
 
 export async function logout(token) {
