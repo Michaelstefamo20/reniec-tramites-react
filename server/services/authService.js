@@ -97,29 +97,48 @@ export async function requestEmailChange(accountId,{currentPassword,newEmail}){
   const token=randomBytes(32).toString("base64url");
   try{
     await client.query("BEGIN");
-    const {rows}=await client.query("SELECT id,email,password_hash FROM accounts WHERE id=$1 AND verified_at IS NOT NULL FOR UPDATE",[accountId]);
+    const {rows}=await client.query("SELECT id,email,password_hash,pending_email FROM accounts WHERE id=$1 AND verified_at IS NOT NULL FOR UPDATE",[accountId]);
     const account=rows[0];
     if(!account||!(await verifyPassword(String(currentPassword||""),account.password_hash)))throw new AuthError(401,"La contraseña actual no es correcta.");
     if(cleanEmail===account.email)throw new AuthError(400,"El correo nuevo debe ser distinto del actual.");
     const duplicate=await client.query("SELECT id FROM accounts WHERE email=$1 AND id<>$2",[cleanEmail,accountId]);
     if(account.pending_email&&account.pending_email!==cleanEmail)throw new AuthError(409,"Ya hay un cambio de correo pendiente. Confírmalo o cancélalo primero.");
     if(duplicate.rows.length)throw new AuthError(409,"Ese correo ya está asociado a otra cuenta.");
-    await client.query("UPDATE accounts SET pending_email=$1 WHERE id=$2",[cleanEmail,accountId]);
-    await client.query("DELETE FROM tokens WHERE account_id=$1 AND purpose='change-email'",[accountId]);
-    await client.query("INSERT INTO tokens(token_hash,account_id,purpose,expires_at,created_at) VALUES($1,$2,'change-email',$3,$4)",[hashToken(token),accountId,Date.now()+30*60*1000,Date.now()]);
+    await client.query("UPDATE accounts SET pending_email=$1,pending_email_confirmed_at=NULL WHERE id=$2",[cleanEmail,accountId]);
+    await client.query("DELETE FROM tokens WHERE account_id=$1 AND purpose IN ('change-email-authorize','change-email')",[accountId]);
+    await client.query("INSERT INTO tokens(token_hash,account_id,purpose,expires_at,created_at) VALUES($1,$2,'change-email-authorize',$3,$4)",[hashToken(token),accountId,Date.now()+30*60*1000,Date.now()]);
     await client.query("COMMIT");
   }catch(error){await client.query("ROLLBACK").catch(()=>{});throw error}finally{client.release()}
-  try{await sendActionEmail({id:accountId,email:cleanEmail},"change-email",token)}catch(error){await authRepository.clearPendingEmail(accountId).catch(()=>{});await authRepository.deleteTokensForPurpose(accountId,"change-email").catch(()=>{});throw error}
-  return{message:"Enviamos un enlace de confirmación al nuevo correo. Tu correo actual seguirá activo hasta que lo confirmes."};
+  try{await sendActionEmail({id:accountId,email:account.email},"change-email-authorize",token)}catch(error){await authRepository.clearPendingEmail(accountId).catch(()=>{});await authRepository.deleteTokensForPurpose(accountId,"change-email-authorize").catch(()=>{});throw error}
+  return{message:"Enviamos un enlace de autorización a tu correo actual. Después enviaremos una segunda confirmación a la nueva dirección."};
 }
 
-export async function confirmEmailChange(token){
+export async function confirmEmailChange(token,sendEmail=sendActionEmail){
   const client=await pool.connect();
   try{
     await client.query("BEGIN");
     const hash=hashToken(String(token||""));
     const pending=await authRepository.findPendingEmailToken(client,hash,Date.now());
     if(!pending)throw new AuthError(400,"El enlace para cambiar el correo no es válido o venció.");
+    const tokenRow=await client.query("SELECT purpose FROM tokens WHERE token_hash=$1",[hash]);
+    const purpose=tokenRow.rows[0]?.purpose;
+    if(purpose==="change-email-authorize"){
+      await client.query("UPDATE accounts SET pending_email_confirmed_at=NOW() WHERE id=$1",[pending.account_id]);
+      await authRepository.consumeToken(client,hash);
+      await client.query("COMMIT");
+      try{
+        const newToken=randomBytes(32).toString("base64url");
+        await authRepository.createToken({accountId:pending.account_id,tokenHash:hashToken(newToken),purpose:"change-email",expiresAt:Date.now()+30*60*1000});
+        await sendEmail({id:pending.account_id,email:pending.pending_email},"change-email",newToken);
+      }catch(error){
+        await authRepository.clearPendingEmail(pending.account_id).catch(()=>{});
+        await authRepository.deleteTokensForPurpose(pending.account_id,"change-email").catch(()=>{});
+        console.error("New email confirmation delivery failed:",error.code||error.message);
+        throw new AuthError(502,"Autorizamos la solicitud, pero no pudimos enviar el enlace al correo nuevo. Inicia sesión y vuelve a solicitar el cambio.");
+      }
+      return{message:"Correo actual confirmado. Enviamos la segunda confirmación al correo nuevo; el cambio aún no se aplica."};
+    }
+    if(purpose!=="change-email"||!pending.pending_email_confirmed_at)throw new AuthError(400,"Primero debe autorizarse el cambio desde el correo actual.");
     const duplicate=await client.query("SELECT id FROM accounts WHERE email=$1 AND id<>$2 FOR UPDATE",[pending.pending_email,pending.account_id]);
     if(duplicate.rows.length)throw new AuthError(409,"Ese correo ya está asociado a otra cuenta.");
     await authRepository.applyPendingEmail(client,pending.account_id,pending.pending_email);
@@ -133,6 +152,7 @@ export async function confirmEmailChange(token){
 
 export async function cancelPendingEmailChange(accountId){
   await authRepository.clearPendingEmail(accountId);
+  await authRepository.deleteTokensForPurpose(accountId,"change-email-authorize");
   await authRepository.deleteTokensForPurpose(accountId,"change-email");
   return{message:"El cambio de correo pendiente fue cancelado."};
 }

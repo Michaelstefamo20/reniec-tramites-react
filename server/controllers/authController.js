@@ -55,7 +55,7 @@ export const cancelEmailChangeController = asyncHandler((req,res)=>respond(res,(
 export const accountSecurityController = asyncHandler(async(req,res)=>{
   const security=await authRepository.getAccountSecurity(req.accountId);
   if(!security)return res.status(404).json({error:"No se encontró la cuenta."});
-  res.json({pendingEmail:security.pending_email||null,emailVerified:Boolean(security.verified_at)});
+  res.json({pendingEmail:security.pending_email||null,pendingEmailAuthorized:Boolean(security.pending_email_confirmed_at),emailVerified:Boolean(security.verified_at)});
 });
 export const confirmEmailChangeController = asyncHandler(async(req,res)=>{
   try{const result=await confirmEmailChange(req.body?.token);res.clearCookie("reniec_session",cookieOptions(0));res.json(result)}

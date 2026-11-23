@@ -68,10 +68,10 @@ export const authRepository = {
     await pool.query("UPDATE accounts SET pending_email=$1 WHERE id=$2",[email,accountId]);
   },
   async clearPendingEmailForClient(client,accountId){
-    await client.query("UPDATE accounts SET pending_email=NULL WHERE id=$1",[accountId]);
+    await client.query("UPDATE accounts SET pending_email=NULL,pending_email_confirmed_at=NULL WHERE id=$1",[accountId]);
   },
   async getAccountSecurity(accountId){
-    const {rows}=await pool.query("SELECT email,pending_email,verified_at FROM accounts WHERE id=$1",[accountId]);
+    const {rows}=await pool.query("SELECT email,pending_email,pending_email_confirmed_at,verified_at FROM accounts WHERE id=$1",[accountId]);
     return rows[0]||null;
   },
   async findAccountWithPassword(accountId){
@@ -79,11 +79,11 @@ export const authRepository = {
     return rows[0]||null;
   },
   async findPendingEmailToken(client,tokenHash,now){
-    const {rows}=await client.query("SELECT t.account_id,a.pending_email FROM tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=$1 AND t.purpose='change-email' AND t.expires_at>$2 AND a.pending_email IS NOT NULL FOR UPDATE OF t,a",[tokenHash,now]);
+    const {rows}=await client.query("SELECT t.account_id,a.pending_email,a.pending_email_confirmed_at FROM tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=$1 AND t.purpose IN ('change-email-authorize','change-email') AND t.expires_at>$2 AND a.pending_email IS NOT NULL FOR UPDATE OF t,a",[tokenHash,now]);
     return rows[0];
   },
   async applyPendingEmail(client,accountId,email){
-    await client.query("UPDATE accounts SET email=$1,pending_email=NULL WHERE id=$2",[email,accountId]);
+    await client.query("UPDATE accounts SET email=$1,pending_email=NULL,pending_email_confirmed_at=NULL WHERE id=$2",[email,accountId]);
   },
   async clearPendingEmail(accountId){
     await pool.query("UPDATE accounts SET pending_email=NULL WHERE id=$1",[accountId]);

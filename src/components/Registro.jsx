@@ -61,7 +61,7 @@ export default function Registro({ onRegister }) {
   };
 
   const title = mode === "confirm-email"?"Confirma tu correo nuevo":mode === "register" ? "Crea tu cuenta" : mode === "login" ? "Ingresa a tu cuenta" : mode === "forgot" ? "Recupera tu acceso" : mode === "setup" ? "Activa tu cuenta" : "Restablece tu contraseña";
-  const lead = mode === "confirm-email"?"Al continuar, confirmas que tienes acceso al nuevo correo de tu cuenta.":mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Usa el enlace de recuperación para crear una contraseña nueva.";
+  const lead = mode === "confirm-email"?"Este enlace puede ser la autorización desde tu correo actual o la confirmación del correo nuevo.":mode === "register" ? "Ingresa tus datos y te enviaremos un enlace para terminar el registro." : mode === "login" ? "Accede para consultar y gestionar tus trámites." : mode === "forgot" ? "Te enviaremos un enlace seguro a tu correo registrado." : mode === "setup" ? "El enlace confirmó el acceso al correo. Ahora crea tu contraseña personal." : "Usa el enlace de recuperación para crear una contraseña nueva.";
 
   return <main className="auth-page">
     <section className="auth-card">
@@ -71,7 +71,7 @@ export default function Registro({ onRegister }) {
       <p className="auth-lead">{lead}</p>
       <div className="security-notice"><b>Protección de tu cuenta</b><span>La contraseña se crea dentro del sitio después de abrir el enlace. Nunca la enviaremos por correo. La validación oficial de identidad requiere una integración autorizada con RENIEC.</span></div>
       <form onSubmit={submit} noValidate>
-        {mode==="confirm-email"&&<div className="security-notice"><b>Confirmación segura</b><span>El correo solo cambiará tras confirmar el enlace válido, de un solo uso y con tiempo limitado.</span></div>}
+        {mode==="confirm-email"&&<div className="security-notice"><b>Confirmación segura</b><span>El correo solo cambiará después de autorizar la solicitud en tu correo actual y confirmar el segundo enlace enviado al correo nuevo.</span></div>}
         {mode === "register" && <>
           <label htmlFor="reg-name">Nombres y apellidos</label>
           <input id="reg-name" type="text" autoComplete="name" maxLength={100} value={name} onChange={e=>setName(e.target.value.replace(/[<>]/g,""))} required placeholder="Como aparecen en tu DNI" />
