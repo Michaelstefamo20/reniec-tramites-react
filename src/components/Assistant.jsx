@@ -63,7 +63,7 @@ export default function Assistant({hint,open,setOpen,load,region,language,onHelp
   };
   useEffect(()=>()=>{recognition.current?.stop();window.speechSynthesis?.cancel()},[]);
   const [v,setV]=useState("");
-  return(<aside className={"card side"+(open?" open":"")} aria-label="Asistente virtual">
+  return(<aside className={"card side"+(open?" open":"")} aria-label={t("Asistente virtual")}>
     <button className="close" onClick={()=>setOpen(false)} aria-label={t("Cerrar")}>✕</button>
     <h2 style={{fontSize:"1.05rem"}}>{t("Asistente virtual de orientación")}</h2>
     <p className="voice-hint">{t("No es un canal oficial de RENIEC. No escribas tu DNI, contraseña ni datos de pago.")}</p>
