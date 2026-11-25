@@ -60,7 +60,6 @@ export async function initializeDatabase() {
       ALTER TABLE accounts ALTER COLUMN password_hash DROP NOT NULL;
       ALTER TABLE accounts ADD COLUMN IF NOT EXISTS pending_email TEXT;
       ALTER TABLE accounts ADD COLUMN IF NOT EXISTS pending_email_confirmed_at TIMESTAMPTZ;
-      ALTER TABLE accounts ADD COLUMN IF NOT EXISTS pending_email_confirmed_at TIMESTAMPTZ;
       CREATE TABLE IF NOT EXISTS support_inquiries (
         id BIGSERIAL PRIMARY KEY,
         public_id UUID NOT NULL UNIQUE,
