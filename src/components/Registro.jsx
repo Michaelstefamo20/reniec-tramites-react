@@ -13,6 +13,7 @@ export default function Registro({ onRegister }) {
   const [dni, setDni] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,7 +86,7 @@ export default function Registro({ onRegister }) {
         </>}
         {(mode === "login" || mode === "setup" || mode === "reset") && <>
           <label htmlFor="reg-password">{mode === "login" ? "Contraseña" : "Crea tu contraseña"}</label>
-          <input id="reg-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} required />
+          <div className="auth-password-field"><input id="reg-password" type={mode === "login" && showLoginPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)} required />{mode === "login"&&<button className="account-password-toggle" type="button" onClick={()=>setShowLoginPassword(value=>!value)} aria-label={showLoginPassword?"Ocultar contraseña":"Mostrar contraseña"} title={showLoginPassword?"Ocultar contraseña":"Mostrar contraseña"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>{showLoginPassword&&<path d="m4 4 16 16"/>}</svg></button>}</div>
           <span className="field-hint">Mínimo 12 caracteres, mayúscula, minúscula, número y símbolo.</span>
         </>}
         {error&&<p className="form-error" role="alert">{error}</p>}
