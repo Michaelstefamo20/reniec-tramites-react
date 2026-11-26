@@ -1,20 +1,21 @@
-import {useState,useEffect} from "react";
-import {ESTADOS,SEED,HINT} from "../data.js";
+import {lazy,Suspense,useState,useEffect} from "react";
+import {SEED,HINT} from "../data.js";
 import Registro from "./Registro.jsx";
 import LOGO from "../assets/logo.png";
-import Nuevo from "./Nuevo.jsx";
-import Inicio from "./Inicio.jsx";
-import Mis from "./Mis.jsx";
-import Familia from "./Familia.jsx";
-import Ayuda from "./Ayuda.jsx";
-import Assistant from "./Assistant.jsx";
-import Soporte from "./Soporte.jsx";
-import PanelAdmin from "./PanelAdmin.jsx";
-import Agencias from "./Agencias.jsx";
-import Cuenta from "./Cuenta.jsx";
 import AppSplash from "./AppSplash.jsx";
 import { useLanguage } from "./LanguageProvider.jsx";
-import Onboarding from "./Onboarding.jsx";
+
+const Nuevo=lazy(()=>import("./Nuevo.jsx"));
+const Inicio=lazy(()=>import("./Inicio.jsx"));
+const Mis=lazy(()=>import("./Mis.jsx"));
+const Familia=lazy(()=>import("./Familia.jsx"));
+const Ayuda=lazy(()=>import("./Ayuda.jsx"));
+const Assistant=lazy(()=>import("./Assistant.jsx"));
+const Soporte=lazy(()=>import("./Soporte.jsx"));
+const PanelAdmin=lazy(()=>import("./PanelAdmin.jsx"));
+const Agencias=lazy(()=>import("./Agencias.jsx"));
+const Cuenta=lazy(()=>import("./Cuenta.jsx"));
+const Onboarding=lazy(()=>import("./Onboarding.jsx"));
 import { authApi } from "../services/authApi.js";
 
 export default function Shell(){
@@ -32,6 +33,7 @@ export default function Shell(){
   const [big,setBig]=useState(false);
   const [load,setLoad]=useState(false);
   const [open,setOpen]=useState(false);
+  const [assistantLoaded,setAssistantLoaded]=useState(false);
   const [bell,setBell]=useState(false);
   const [citas,setCitas]=useState([]);
   const [familyMembers,setFamilyMembers]=useState([]);
@@ -130,20 +132,24 @@ export default function Shell(){
       {locationNotice&&<div className="location-toast" role="status"><b>{locationNotice.error?t("Ubicación no disponible"):`${t("Región detectada:")} ${t(locationNotice.region)}`}</b><span>{locationNotice.error?t(locationNotice.error):`${t(locationNotice.suggestLanguage?"Idioma cambiado a":"Idioma sugerido:")} ${t(locationNotice.language==="ay"?"Aimara":locationNotice.language==="qu"?"Quechua":"Español")}. ${t("Puedes modificarlo en cualquier momento.")}`}</span>{locationNotice.error&&<button className="text-action" onClick={()=>go("ayuda")}>Ayuda con ubicación</button>}<button className="notice-close" onClick={()=>setLocationNotice(null)} aria-label={t("Cerrar aviso")}>×</button></div>}</header>
     {connectionLost&&<div className="offline-security-notice" role="alert"><span aria-hidden="true">◉</span><span><b>{t("Sin conexión")}</b><small>{t("La sesión se cerrará automáticamente tras tres minutos sin conexión.")}</small></span></div>}
     <div className="content">
-      {view==="inicio"&&<Inicio go={go} tr={tr} load={load} name={user?.name} userId={user?.email} dni={user?.dni}/>}
-      {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} familyMember={pre.familyMember} familyMembers={familyMembers} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
-      {view==="mis"&&<Mis tr={tr} adv={adv}/>}
-      {view==="familia"&&<div data-tour="family"><Familia go={go} citas={citas} addCita={addCita} onMembersChange={setFamilyMembers}/></div>}
-      {view==="cuenta"&&<Cuenta user={user} onLogout={logout} onUserUpdate={setUser}/>}
-      {view==="agencias"&&<div data-tour="offices"><Agencias region={region}/></div>}
-      {view==="ayuda"&&<Ayuda big={big} setBig={setBig} load={load} setLoad={setLoad} setOpen={setOpen}/>}
-      {view==="soporte"&&<Soporte/>}
-      {view==="admin"&&<PanelAdmin user={user} onBack={()=>go("inicio")}/>}
+      <Suspense fallback={<div className="view-loading" role="status">{t("Cargando sección…")}</div>}>
+        {view==="inicio"&&<Inicio go={go} tr={tr} load={load} name={user?.name} userId={user?.email} dni={user?.dni}/>}
+        {view==="nuevo"&&<Nuevo key={pre.k} pre={pre.t} famInit={pre.f} familyMember={pre.familyMember} familyMembers={familyMembers} onDone={t=>setTr(l=>[{...t,e:0},...l])} go2={go}/>}
+        {view==="mis"&&<Mis tr={tr} adv={adv}/>}
+        {view==="familia"&&<div data-tour="family"><Familia go={go} citas={citas} addCita={addCita} onMembersChange={setFamilyMembers}/></div>}
+        {view==="cuenta"&&<Cuenta user={user} onLogout={logout} onUserUpdate={setUser}/>}
+        {view==="agencias"&&<div data-tour="offices"><Agencias region={region}/></div>}
+        {view==="ayuda"&&<Ayuda big={big} setBig={setBig} load={load} setLoad={setLoad} setOpen={setOpen}/>}
+        {view==="soporte"&&<Soporte/>}
+        {view==="admin"&&<PanelAdmin user={user} onBack={()=>go("inicio")}/>}
+      </Suspense>
     </div></div>
   {user?.isAdmin&&<button className="admin-shortcut" onClick={()=>go("admin")}>Panel de atención</button>}
   <nav className="tabs" aria-label="Menú móvil">{[["inicio","⌂","Inicio"],["mis","▤","Mis trámites"],["nuevo","＋","Trámites"],["familia","♧","Familia"],["agencias","⌖","Oficinas"],["cuenta","◉","Cuenta"],["ayuda","?","Ayuda"]].map(([id,icon,label])=><button key={id} className={view===id?"on":""} onClick={()=>go(id)}><span className="ico">{icon}</span>{label}</button>)}</nav>
-  <div className="assist" data-tour="assistant"><button className="fab" onClick={()=>setOpen(true)}><span className="av2">💬</span><span><b>Asistente virtual</b><br/><small>Ayuda por texto o voz</small></span></button></div>
-  <Assistant hint={HINT[view]||"Puedo orientarte sobre navegación, idiomas y trámites incluidos en este prototipo."} open={open} setOpen={setOpen} load={load} region={region} language={language} onHelp={()=>go("ayuda")}/>
-  {showTour&&<Onboarding onClose={closeTour} onNavigate={view=>view&&setView(view)}/>}
+  <div className="assist" data-tour="assistant"><button className="fab" onClick={()=>{setAssistantLoaded(true);setOpen(true)}}><span className="av2">💬</span><span><b>Asistente virtual</b><br/><small>Ayuda por texto o voz</small></span></button></div>
+  <Suspense fallback={null}>
+    {assistantLoaded&&<Assistant hint={HINT[view]||"Puedo orientarte sobre navegación, idiomas y trámites incluidos en este prototipo."} open={open} setOpen={setOpen} load={load} region={region} language={language} onHelp={()=>go("ayuda")}/>}
+    {showTour&&<Onboarding onClose={closeTour} onNavigate={view=>view&&setView(view)}/>}
+  </Suspense>
   </div>);
 }
